@@ -32,6 +32,16 @@ body {
   color: var(--color-ink);
 }
 
+html.immersive-screen,
+html.immersive-screen body,
+html.immersive-screen #app {
+  background: var(--immersive-screen-color, #020617);
+}
+
+body.immersive-screen {
+  overflow: hidden;
+}
+
 button,
 input,
 select {

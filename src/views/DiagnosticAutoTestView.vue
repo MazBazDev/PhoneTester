@@ -1,5 +1,8 @@
 <template>
-  <div v-if="session && testDefinition && step" :class="immersiveActive ? 'min-h-screen bg-slate-950' : ''">
+  <div
+    v-if="session && testDefinition && step"
+    :class="immersiveActive ? 'fixed inset-0 z-50 overflow-hidden bg-slate-950' : ''"
+  >
     <AppShell
       :eyebrow="testDefinition.mode === 'guided' ? 'Diagnostic guide' : 'Diagnostic automatique'"
       :title="testDefinition.name"
@@ -28,49 +31,90 @@
           <section
             v-if="props.testId === 'screen' && currentGuidedSubStep && guidedState.phase === 'active'"
             ref="screenPanelRef"
-            class="flex flex-1 flex-col px-6 py-8 shadow-2xl"
-            :class="[currentGuidedSubStep.tone, immersiveActive ? 'min-h-screen rounded-none' : 'rounded-[32px]']"
-            :style="{ backgroundColor: currentGuidedSubStep.color || '#ffffff' }"
+            class="flex flex-1 flex-col shadow-2xl"
+            :class="[currentGuidedSubStep.tone, immersiveActive ? 'min-h-[100dvh] rounded-none' : 'rounded-[32px] px-6 py-8']"
+            :style="screenPanelStyle"
           >
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] opacity-80">
-              Ecran {{ guidedState.currentStepIndex + 1 }} / {{ guidedState.steps.length }}
-            </p>
-            <h2 class="mt-4 text-3xl font-bold">{{ currentGuidedSubStep.label }}</h2>
-            <p class="mt-4 max-w-sm text-base leading-7 opacity-90">{{ currentGuidedSubStep.instruction }}</p>
-            <div class="flex flex-1 items-center justify-center py-8">
-              <button
-                type="button"
-                class="flex h-32 w-32 items-center justify-center rounded-[28px] border-4 text-center text-xs font-semibold uppercase tracking-[0.18em] shadow-lg"
-                :style="screenProbeStyle"
-                @dblclick="exitScreenFullscreen"
-                @touchstart.passive="handleScreenProbeTouch"
-              >
-                x2 pour sortir du plein ecran
-              </button>
+            <div
+              v-if="immersiveActive"
+              class="px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]"
+            >
+              <div class="inline-flex rounded-full bg-black/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]">
+                {{ guidedState.currentStepIndex + 1 }} / {{ guidedState.steps.length }}
+              </div>
             </div>
-            <div class="mt-auto grid grid-cols-2 gap-3">
+            <template v-else>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] opacity-80">
+                Ecran {{ guidedState.currentStepIndex + 1 }} / {{ guidedState.steps.length }}
+              </p>
+              <h2 class="mt-4 text-3xl font-bold">{{ currentGuidedSubStep.label }}</h2>
+              <p class="mt-4 max-w-sm text-base leading-7 opacity-90">{{ currentGuidedSubStep.instruction }}</p>
+            </template>
+            <div
+              class="flex flex-1"
+              @dblclick="exitScreenFullscreen"
+              @touchstart.passive="handleScreenProbeTouch"
+            />
+            <div
+              class="mt-auto grid grid-cols-2 gap-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+              :class="immersiveActive ? 'bg-transparent' : ''"
+            >
               <AppButton class="w-full" variant="secondary" @click="answerScreen('no')">Aucun defaut</AppButton>
               <AppButton class="w-full" @click="answerScreen('yes')">Defaut visible</AppButton>
             </div>
           </section>
 
-          <AppCard v-else-if="props.testId === 'touch' && guidedState.phase === 'active'" class="bg-slate-50/90">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Grille tactile</p>
-            <h2 class="mt-3 text-2xl font-bold text-slate-950">Couvre toute la surface</h2>
-            <p class="mt-3 text-sm leading-6 text-slate-600">
-              Balaye l'ecran entier puis essaye avec plusieurs doigts en meme temps.
-            </p>
-            <div class="mt-5">
+          <section
+            v-else-if="props.testId === 'touch' && guidedState.phase === 'active'"
+            class="flex flex-1 flex-col"
+            :class="immersiveActive ? 'min-h-[100dvh] bg-slate-50' : 'rounded-[32px] bg-slate-50/90 p-6'"
+          >
+            <div
+              v-if="immersiveActive"
+              class="flex items-center justify-between gap-4 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] text-slate-700"
+            >
+              <div>
+                <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Grille tactile</p>
+                <p class="mt-1 text-sm font-semibold">Balaye toute la surface. La case x2 quitte l'ecran tactile.</p>
+              </div>
+              <div class="rounded-2xl bg-white/80 px-3 py-2 text-right shadow-sm">
+                <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Couverture</p>
+                <p class="text-lg font-bold text-slate-950">{{ touchCoveragePercent }}%</p>
+              </div>
+            </div>
+            <template v-else>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Grille tactile</p>
+              <h2 class="mt-3 text-2xl font-bold text-slate-950">Couvre toute la surface</h2>
+              <p class="mt-3 text-sm leading-6 text-slate-600">
+                Balaye l'ecran entier puis essaye avec plusieurs doigts en meme temps.
+              </p>
+            </template>
+            <div :class="immersiveActive ? 'mt-4 flex-1' : 'mt-5'">
               <TouchGridPanel
                 :cols="touchCols"
                 :rows="touchRows"
                 :visited-cell-ids="touchVisitedCellIds"
                 :coverage-percent="touchCoveragePercent"
                 :max-simultaneous-touches="touchMaxSimultaneousTouches"
+                :immersive="immersiveActive"
+                :exit-cell-id="touchExitCellId"
                 @track="trackTouchGrid"
               />
             </div>
-          </AppCard>
+            <div
+              v-if="immersiveActive"
+              class="grid grid-cols-2 gap-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4"
+            >
+              <div class="rounded-2xl bg-white/85 px-4 py-3 shadow-sm">
+                <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Couverture</p>
+                <p class="mt-1 text-lg font-bold text-slate-950">{{ touchCoveragePercent }}%</p>
+              </div>
+              <div class="rounded-2xl bg-white/85 px-4 py-3 text-right shadow-sm">
+                <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Multitouch</p>
+                <p class="mt-1 text-lg font-bold text-slate-950">{{ touchMaxSimultaneousTouches }}</p>
+              </div>
+            </div>
+          </section>
 
           <AppCard v-else-if="isSensorTest && guidedState.phase === 'active'" class="bg-slate-50/90">
             <SensorLivePanel
@@ -283,6 +327,7 @@ const cameraRuntime = useCameraMedia()
 const cameraPanelRef = ref<{ videoElement: HTMLVideoElement | null } | null>(null)
 const screenPanelRef = ref<HTMLElement | null>(null)
 const lastScreenProbeTapAt = ref(0)
+const lastTouchExitTapAt = ref(0)
 const launchInFlight = ref(false)
 const autoStartedTestKey = ref<string | null>(null)
 
@@ -351,17 +396,18 @@ const immersiveActive = computed(
       testDefinition.value?.immersive &&
         guidedState.value &&
         guidedState.value.phase === 'active' &&
-        props.testId === 'screen'
+        ['screen', 'touch'].includes(props.testId)
     )
 )
-const screenProbeStyle = computed(() => ({
-  backgroundColor: currentGuidedSubStep.value?.tone === 'text-white' ? '#f8fafc' : '#020617',
-  color: currentGuidedSubStep.value?.tone === 'text-white' ? '#020617' : '#f8fafc',
-  borderColor: currentGuidedSubStep.value?.tone === 'text-white' ? 'rgba(2, 6, 23, 0.14)' : 'rgba(248, 250, 252, 0.4)'
+const screenPanelStyle = computed(() => ({
+  backgroundColor: currentGuidedSubStep.value?.color || '#ffffff',
+  paddingTop: immersiveActive.value ? '0' : undefined,
+  paddingBottom: immersiveActive.value ? '0' : undefined
 }))
 
 const touchRows = computed(() => Number(guidedState.value?.metrics.rows ?? 8))
 const touchCols = computed(() => Number(guidedState.value?.metrics.cols ?? 5))
+const touchExitCellId = computed(() => `${touchRows.value - 1}-${touchCols.value - 1}`)
 const touchVisitedCellIds = computed(() => {
   const value = guidedState.value?.metrics.visitedCellIds
   return Array.isArray(value) ? value : []
@@ -767,6 +813,27 @@ const exitScreenFullscreen = async () => {
   }
 }
 
+const syncImmersiveScreenChrome = () => {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const root = document.documentElement
+  const body = document.body
+
+  if (immersiveActive.value) {
+    const background = currentGuidedSubStep.value?.color || '#020617'
+    root.classList.add('immersive-screen')
+    body.classList.add('immersive-screen')
+    root.style.setProperty('--immersive-screen-color', background)
+    return
+  }
+
+  root.classList.remove('immersive-screen')
+  body.classList.remove('immersive-screen')
+  root.style.removeProperty('--immersive-screen-color')
+}
+
 const handleScreenProbeTouch = () => {
   const now = Date.now()
 
@@ -775,6 +842,20 @@ const handleScreenProbeTouch = () => {
   }
 
   lastScreenProbeTapAt.value = now
+}
+
+const handleTouchExitCell = (cellIds: string[]) => {
+  if (!cellIds.includes(touchExitCellId.value)) {
+    return
+  }
+
+  const now = Date.now()
+
+  if (now - lastTouchExitTapAt.value < 320) {
+    finishTouchCollection()
+  }
+
+  lastTouchExitTapAt.value = now
 }
 
 const stopActiveRuntimes = () => {
@@ -1040,6 +1121,8 @@ const answerScreen = (response: 'yes' | 'no') => {
 }
 
 const trackTouchGrid = ({ cellIds, simultaneousTouches }: { cellIds: string[]; simultaneousTouches: number }) => {
+  handleTouchExitCell(cellIds)
+
   const visitedCellIds = Array.from(new Set([...touchVisitedCellIds.value, ...cellIds]))
   const totalCells = touchRows.value * touchCols.value
   const coveragePercent = Math.round((visitedCellIds.length / totalCells) * 100)
@@ -1114,6 +1197,7 @@ const quitDiagnostic = async () => {
 
 onBeforeUnmount(() => {
   stopActiveRuntimes()
+  syncImmersiveScreenChrome()
 })
 
 watch(
@@ -1133,10 +1217,19 @@ watch(
 )
 
 watch(
+  [immersiveActive, currentGuidedSubStep],
+  () => {
+    syncImmersiveScreenChrome()
+  },
+  { immediate: true }
+)
+
+watch(
   () => `${props.sessionId}:${props.testId}`,
   () => {
     autoStartedTestKey.value = null
     lastScreenProbeTapAt.value = 0
+    lastTouchExitTapAt.value = 0
   }
 )
 

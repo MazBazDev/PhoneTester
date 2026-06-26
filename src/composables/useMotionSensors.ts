@@ -54,6 +54,10 @@ const getOrientationKind = () => {
   }
 
   const type = window.screen.orientation?.type
+  const legacyOrientation =
+    typeof (window as Window & { orientation?: number }).orientation === 'number'
+      ? Number((window as Window & { orientation?: number }).orientation)
+      : null
 
   if (type?.startsWith('portrait')) {
     return 'portrait'
@@ -63,7 +67,31 @@ const getOrientationKind = () => {
     return 'landscape'
   }
 
+  if (legacyOrientation !== null) {
+    return Math.abs(legacyOrientation) === 90 ? 'landscape' : 'portrait'
+  }
+
   return window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
+}
+
+const getOrientationAngle = () => {
+  if (!isBrowser()) {
+    return 0
+  }
+
+  const screenAngle = window.screen.orientation?.angle
+
+  if (typeof screenAngle === 'number') {
+    return screenAngle
+  }
+
+  const legacyOrientation = (window as Window & { orientation?: number }).orientation
+
+  if (typeof legacyOrientation === 'number') {
+    return legacyOrientation
+  }
+
+  return getOrientationKind() === 'landscape' ? 90 : 0
 }
 
 const getHeadingFromOrientationEvent = (event: DeviceOrientationEvent) => {
@@ -224,9 +252,13 @@ export const useMotionSensors = () => {
 
     if (mode === 'rotation') {
       const emitOrientation = () => {
+        const angle = getOrientationAngle()
         const sample = {
-          ...rotationSample.value,
-          orientation: getOrientationKind()
+          orientation: getOrientationKind(),
+          alpha: angle,
+          beta: angle === 180 ? 180 : 0,
+          gamma: Math.abs(angle) === 90 ? angle : 0,
+          hasGyroscopeData: rotationSample.value.hasGyroscopeData || angle !== 0
         }
 
         rotationSample.value = sample
@@ -249,6 +281,8 @@ export const useMotionSensors = () => {
       emitOrientation()
       window.addEventListener('orientationchange', emitOrientation)
       cleanups.push(() => window.removeEventListener('orientationchange', emitOrientation))
+      window.addEventListener('resize', emitOrientation)
+      cleanups.push(() => window.removeEventListener('resize', emitOrientation))
 
       if ('DeviceOrientationEvent' in window) {
         window.addEventListener('deviceorientation', handleDeviceOrientation)

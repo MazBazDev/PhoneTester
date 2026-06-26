@@ -113,12 +113,53 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
-    const probe = wrapper.get('section button[type="button"]')
-    expect(probe.text()).toContain('plein ecran')
+    const probe = wrapper.get('section > div.flex.flex-1')
 
     await probe.trigger('dblclick')
     fullscreenElement = null
 
     expect(exitFullscreen).toHaveBeenCalled()
+  })
+
+  it('renders touch test in immersive mode with an exit cell indicator', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+    store.startGuidedTest(session.id, 'touch')
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/touch`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'touch'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    expect(wrapper.text()).toContain("x2 quitte l'ecran tactile")
+    expect(wrapper.text()).toContain('x2 sortie')
   })
 })

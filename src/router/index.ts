@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import DiagnosticIntroView from '../views/DiagnosticIntroView.vue'
 import DiagnosticAutoTestView from '../views/DiagnosticAutoTestView.vue'
@@ -6,7 +6,7 @@ import DiagnosticSummaryView from '../views/DiagnosticSummaryView.vue'
 import { useDiagnosticStore } from '../stores/diagnostic'
 
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes: [
     {
       path: '/',

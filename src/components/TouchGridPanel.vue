@@ -1,8 +1,9 @@
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4" :class="immersive ? 'flex h-full flex-col' : ''">
     <div
       ref="gridRef"
-      class="grid aspect-[5/8] touch-none overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-inner"
+      class="grid touch-none overflow-hidden shadow-inner"
+      :class="immersive ? 'h-full flex-1 rounded-none border-0 bg-white' : 'aspect-[5/8] rounded-[32px] border border-slate-200 bg-white'"
       :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
       @pointerdown="handlePointer"
       @pointermove="handlePointer"
@@ -12,12 +13,20 @@
       <div
         v-for="cellId in cellIds"
         :key="cellId"
-        class="border border-slate-100 transition-colors duration-150"
-        :class="visitedCellSet.has(cellId) ? 'bg-orange-500' : 'bg-slate-50'"
-      />
+        class="relative border border-slate-100 transition-colors duration-150"
+        :class="cellClass(cellId)"
+      >
+        <div
+          v-if="cellId === exitCellId"
+          class="pointer-events-none absolute inset-1 flex items-center justify-center rounded-xl border border-dashed text-center text-[10px] font-semibold uppercase tracking-[0.12em]"
+          :class="visitedCellSet.has(cellId) ? 'border-white/60 text-white' : 'border-slate-400 text-slate-500'"
+        >
+          x2 sortie
+        </div>
+      </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
+    <div v-if="!immersive" class="grid grid-cols-2 gap-3">
       <div class="rounded-3xl border border-slate-200 bg-white/80 px-4 py-3">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Couverture</p>
         <p class="mt-2 text-2xl font-bold text-slate-950">{{ coveragePercent }}%</p>
@@ -39,6 +48,8 @@ const props = defineProps<{
   visitedCellIds: string[]
   coveragePercent: number
   maxSimultaneousTouches: number
+  immersive?: boolean
+  exitCellId?: string
 }>()
 
 const emit = defineEmits<{
@@ -55,6 +66,18 @@ const cellIds = computed(() =>
     return `${row}-${col}`
   })
 )
+
+const cellClass = (cellId: string) => {
+  if (visitedCellSet.value.has(cellId)) {
+    return 'bg-orange-500'
+  }
+
+  if (cellId === props.exitCellId) {
+    return 'bg-slate-200'
+  }
+
+  return 'bg-slate-50'
+}
 
 const resolveCellId = (clientX: number, clientY: number) => {
   const grid = gridRef.value
