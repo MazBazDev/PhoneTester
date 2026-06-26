@@ -121,7 +121,7 @@ describe('DiagnosticAutoTestView', () => {
     expect(exitFullscreen).toHaveBeenCalled()
   })
 
-  it('renders touch test in immersive mode without exit cell indicator', async () => {
+  it('renders touch test as a pure fullscreen grid without helper text', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -159,7 +159,10 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('5 taps rapides')
+    expect(wrapper.find('[data-testid="touch-stage"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('5 taps rapides')
+    expect(wrapper.text()).not.toContain('Couverture')
+    expect(wrapper.text()).not.toContain('Restant')
     expect(wrapper.text()).not.toContain('x2 sortie')
   })
 

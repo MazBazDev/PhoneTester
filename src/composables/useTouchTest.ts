@@ -9,7 +9,7 @@ import type {
 const GRID_ROWS = 12
 const GRID_COLS = 7
 const TOTAL_CELLS = GRID_ROWS * GRID_COLS
-const COVERAGE_THRESHOLD = 90
+const COVERAGE_THRESHOLD = 100
 
 const buildTouchDetails = (state: DiagnosticGuidedState): DiagnosticTestDetail[] => {
   const visitedCells = Array.isArray(state.metrics.visitedCellIds) ? state.metrics.visitedCellIds : []
@@ -69,7 +69,7 @@ export const useTouchTest = (): DiagnosticTestDefinition => ({
       {
         id: 'touch-grid',
         label: 'Grille tactile',
-        instruction: "Balaye toute la surface de l'ecran jusqu'a la couverture cible ou quitte par 5 taps rapides.",
+        instruction: "Passe sur chaque case de l'ecran. En secours, 5 taps rapides terminent le test.",
         status: 'pending',
         response: null
       }
@@ -93,8 +93,8 @@ export const useTouchTest = (): DiagnosticTestDefinition => ({
       status,
       summary:
         status === 'pass'
-          ? 'La grille tactile a ete largement couverte sans zone morte signalee.'
-          : 'Le controle tactile revele une couverture incomplete ou un doute utilisateur.',
+          ? 'La grille tactile a ete entierement couverte.'
+          : 'Le controle tactile est incomplet ou reste douteux.',
       details: buildTouchDetails(state),
       startedAt: state.startedAt ?? new Date().toISOString(),
       finishedAt: new Date().toISOString()

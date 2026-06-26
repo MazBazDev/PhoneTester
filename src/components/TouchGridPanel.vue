@@ -1,37 +1,34 @@
 <template>
-  <div class="space-y-4" :class="immersive ? 'flex h-full flex-col' : ''">
+  <div
+    ref="stageRef"
+    data-testid="touch-stage"
+    class="grid h-full w-full overflow-hidden bg-stone-100 select-none"
+    :class="immersive ? 'touch-none' : 'aspect-[7/12] rounded-[28px] border border-stone-300 touch-none'"
+    :style="stageStyle"
+    @pointerdown="handlePointerDown"
+    @pointermove="handlePointerMove"
+    @pointerup="handlePointerUp"
+    @pointercancel="handlePointerUp"
+    @touchstart.prevent="handleTouchStart"
+    @touchmove.prevent="handleTouchMove"
+    @touchend.prevent="handleTouchEnd"
+    @touchcancel.prevent="handleTouchEnd"
+  >
     <div
-      ref="gridRef"
-      class="grid overflow-hidden border border-slate-200 bg-white shadow-inner"
-      :class="immersive ? 'h-full flex-1 rounded-none touch-none' : 'aspect-[7/12] rounded-[32px] touch-none'"
-      :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
-      @pointerdown="handlePointerDown"
-      @pointermove="handlePointerMove"
-      @pointerup="handlePointerUp"
-      @pointercancel="handlePointerUp"
-      @touchstart.prevent="handleTouchStart"
-      @touchmove.prevent="handleTouchMove"
-      @touchend.prevent="handleTouchEnd"
-      @touchcancel.prevent="handleTouchEnd"
-    >
-      <div
-        v-for="cellId in cellIds"
-        :key="cellId"
-        class="border border-slate-100 transition-colors duration-100"
-        :class="visitedCellSet.has(cellId) ? 'bg-orange-500' : 'bg-slate-50'"
-      />
-    </div>
-
-    <div v-if="!immersive" class="grid grid-cols-2 gap-3">
-      <div class="rounded-3xl border border-slate-200 bg-white/80 px-4 py-3">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Couverture</p>
-        <p class="mt-2 text-2xl font-bold text-slate-950">{{ coveragePercent }}%</p>
-      </div>
-      <div class="rounded-3xl border border-slate-200 bg-white/80 px-4 py-3">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Cellules</p>
-        <p class="mt-2 text-2xl font-bold text-slate-950">{{ visitedCellIds.length }}</p>
-      </div>
-    </div>
+      v-for="cellId in cellIds"
+      :key="cellId"
+      class="min-h-0 min-w-0 border border-stone-400/80 transition-colors duration-100"
+      :style="
+        visitedCellSet.has(cellId)
+          ? {
+              backgroundColor: '#22c55e',
+              borderColor: '#15803d'
+            }
+          : {
+              backgroundColor: '#f5f5f4'
+            }
+      "
+    />
   </div>
 </template>
 
@@ -43,7 +40,7 @@ interface CellCoords {
   col: number
 }
 
-interface PointPayload {
+interface ContactPoint {
   id: string
   clientX: number
   clientY: number
@@ -53,20 +50,20 @@ const props = defineProps<{
   cols: number
   rows: number
   visitedCellIds: string[]
-  coveragePercent: number
   immersive?: boolean
 }>()
 
 const emit = defineEmits<{
-  track: [payload: { cellIds: string[]; simultaneousTouches: number }]
+  track: [payload: { cellIds: string[] }]
   tap: []
 }>()
 
-const gridRef = ref<HTMLElement | null>(null)
-const activePointers = new Map<string, CellCoords>()
-const activeTouches = new Map<number, CellCoords>()
-const pointerDownAt = new Map<string, number>()
-const touchDownAt = new Map<number, number>()
+const TAP_WINDOW_MS = 220
+
+const stageRef = ref<HTMLElement | null>(null)
+const previousCells = new Map<string, CellCoords>()
+const pressStartedAt = new Map<string, number>()
+const activeContacts = new Set<string>()
 
 const visitedCellSet = computed(() => new Set(props.visitedCellIds))
 const cellIds = computed(() =>
@@ -76,17 +73,26 @@ const cellIds = computed(() =>
     return `${row}-${col}`
   })
 )
+const stageStyle = computed(() => ({
+  gridTemplateColumns: `repeat(${props.cols}, minmax(0, 1fr))`,
+  gridTemplateRows: `repeat(${props.rows}, minmax(0, 1fr))`,
+  touchAction: 'none'
+}))
 
-const buildCellId = ({ row, col }: CellCoords) => `${row}-${col}`
+const buildCellId = (row: number, col: number) => `${row}-${col}`
 
-const resolveCellCoords = (clientX: number, clientY: number): CellCoords | null => {
-  const grid = gridRef.value
+const resolveCell = (clientX: number, clientY: number): CellCoords | null => {
+  const stage = stageRef.value
 
-  if (!grid) {
+  if (!stage) {
     return null
   }
 
-  const rect = grid.getBoundingClientRect()
+  const rect = stage.getBoundingClientRect()
+
+  if (rect.width <= 0 || rect.height <= 0) {
+    return null
+  }
 
   if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
     return null
@@ -98,127 +104,116 @@ const resolveCellCoords = (clientX: number, clientY: number): CellCoords | null 
   return { row, col }
 }
 
-const interpolateCells = (from: CellCoords | null, to: CellCoords): string[] => {
+const interpolate = (from: CellCoords | null, to: CellCoords): string[] => {
   if (!from) {
-    return [buildCellId(to)]
+    return [buildCellId(to.row, to.col)]
   }
 
-  const cells: string[] = []
   const rowDelta = to.row - from.row
   const colDelta = to.col - from.col
   const steps = Math.max(Math.abs(rowDelta), Math.abs(colDelta))
 
   if (steps === 0) {
-    return [buildCellId(to)]
+    return [buildCellId(to.row, to.col)]
   }
+
+  const visited: string[] = []
 
   for (let index = 0; index <= steps; index += 1) {
     const row = Math.round(from.row + (rowDelta * index) / steps)
     const col = Math.round(from.col + (colDelta * index) / steps)
-    cells.push(buildCellId({ row, col }))
+    visited.push(buildCellId(row, col))
   }
 
-  return cells
+  return visited
 }
 
-const emitTracking = (points: PointPayload[], simultaneousTouches: number, store: Map<string | number, CellCoords>) => {
+const emitVisitedCells = (points: ContactPoint[]) => {
   const nextCellIds = points.flatMap((point) => {
-    const previous = store.get(point.id)
-    const current = resolveCellCoords(point.clientX, point.clientY)
+    const current = resolveCell(point.clientX, point.clientY)
 
     if (!current) {
       return []
     }
 
-    store.set(point.id, current)
-    return interpolateCells(previous ?? null, current)
+    const previous = previousCells.get(point.id) ?? null
+    previousCells.set(point.id, current)
+    return interpolate(previous, current)
   })
 
   const cellIds = Array.from(new Set(nextCellIds))
 
-  if (cellIds.length === 0) {
-    return
+  if (cellIds.length > 0) {
+    emit('track', { cellIds })
   }
-
-  emit('track', {
-    cellIds,
-    simultaneousTouches
-  })
 }
 
-const maybeEmitTap = (startedAt: number | undefined) => {
-  if (typeof startedAt !== 'number') {
-    return
-  }
+const maybeEmitTap = (id: string) => {
+  const startedAt = pressStartedAt.get(id)
 
-  if (Date.now() - startedAt <= 220) {
+  if (typeof startedAt === 'number' && Date.now() - startedAt <= TAP_WINDOW_MS) {
     emit('tap')
   }
+
+  activeContacts.delete(id)
+  pressStartedAt.delete(id)
+  previousCells.delete(id)
 }
 
 const handlePointerDown = (event: PointerEvent) => {
-  if (event.pointerType === 'touch') {
-    return
-  }
-
   const id = `pointer-${event.pointerId}`
-  pointerDownAt.set(id, Date.now())
-  emitTracking([{ id, clientX: event.clientX, clientY: event.clientY }], 1, activePointers)
+  activeContacts.add(id)
+  pressStartedAt.set(id, Date.now())
+  if (typeof (event.currentTarget as HTMLElement | null)?.setPointerCapture === 'function') {
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+  }
+  emitVisitedCells([{ id, clientX: event.clientX, clientY: event.clientY }])
 }
 
 const handlePointerMove = (event: PointerEvent) => {
-  if (event.pointerType === 'touch' || event.buttons === 0) {
+  const id = `pointer-${event.pointerId}`
+
+  if (!activeContacts.has(id)) {
     return
   }
 
-  const id = `pointer-${event.pointerId}`
-  emitTracking([{ id, clientX: event.clientX, clientY: event.clientY }], 1, activePointers)
+  emitVisitedCells([{ id, clientX: event.clientX, clientY: event.clientY }])
 }
 
 const handlePointerUp = (event: PointerEvent) => {
-  if (event.pointerType === 'touch') {
-    return
-  }
-
   const id = `pointer-${event.pointerId}`
-  maybeEmitTap(pointerDownAt.get(id))
-  pointerDownAt.delete(id)
-  activePointers.delete(id)
+  maybeEmitTap(id)
 }
 
 const handleTouchStart = (event: TouchEvent) => {
   for (const touch of Array.from(event.changedTouches)) {
-    touchDownAt.set(touch.identifier, Date.now())
+    const id = `touch-${touch.identifier}`
+    activeContacts.add(id)
+    pressStartedAt.set(id, Date.now())
   }
 
-  emitTracking(
+  emitVisitedCells(
     Array.from(event.touches).map((touch) => ({
-      id: String(touch.identifier),
+      id: `touch-${touch.identifier}`,
       clientX: touch.clientX,
       clientY: touch.clientY
-    })),
-    event.touches.length,
-    activeTouches
+    }))
   )
 }
 
 const handleTouchMove = (event: TouchEvent) => {
-  emitTracking(
+  emitVisitedCells(
     Array.from(event.touches).map((touch) => ({
-      id: String(touch.identifier),
+      id: `touch-${touch.identifier}`,
       clientX: touch.clientX,
       clientY: touch.clientY
-    })),
-    event.touches.length,
-    activeTouches
+    }))
   )
 }
 
 const handleTouchEnd = (event: TouchEvent) => {
   for (const touch of Array.from(event.changedTouches)) {
-    maybeEmitTap(touchDownAt.get(touch.identifier))
-    touchDownAt.delete(touch.identifier)
-    activeTouches.delete(touch.identifier)
+    maybeEmitTap(`touch-${touch.identifier}`)
   }
 }
 </script>
