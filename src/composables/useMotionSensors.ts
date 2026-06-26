@@ -121,7 +121,16 @@ const hasSensorSupport = (mode: SensorMode) => {
     return 'DeviceOrientationEvent' in window || 'onorientationchange' in window || 'orientation' in screen
   }
 
-  return 'DeviceMotionEvent' in window
+  if (mode === 'accelerometer') {
+    return (
+      'DeviceMotionEvent' in window ||
+      'ondevicemotion' in window ||
+      'DeviceOrientationEvent' in window ||
+      'ondeviceorientation' in window
+    )
+  }
+
+  return 'DeviceMotionEvent' in window || 'ondevicemotion' in window
 }
 
 const getDeviceMotionCtor = () =>
@@ -209,6 +218,10 @@ export const useMotionSensors = () => {
 
     if ((mode === 'accelerometer' || mode === 'gyroscope') && motionCtor && typeof motionCtor.requestPermission === 'function') {
       requests.push(() => motionCtor.requestPermission!())
+    }
+
+    if (mode === 'accelerometer' && orientationCtor && typeof orientationCtor.requestPermission === 'function') {
+      requests.push(() => orientationCtor.requestPermission!())
     }
 
     if ((mode === 'rotation' || mode === 'compass') && orientationCtor && typeof orientationCtor.requestPermission === 'function') {
@@ -385,6 +398,28 @@ export const useMotionSensors = () => {
 
     window.addEventListener('devicemotion', handleDeviceMotion)
     cleanups.push(() => window.removeEventListener('devicemotion', handleDeviceMotion))
+
+    if (mode === 'accelerometer' && 'DeviceOrientationEvent' in window) {
+      const handleDeviceOrientationFallback = (event: DeviceOrientationEvent) => {
+        if (typeof event.beta !== 'number' && typeof event.gamma !== 'number') {
+          return
+        }
+
+        // Some iPhone/PWA contexts expose orientation angles more reliably than
+        // devicemotion acceleration values. Normalize them into the same sample shape.
+        const sample = {
+          x: (event.gamma ?? 0) / 10,
+          y: (event.beta ?? 0) / 10,
+          z: 0
+        }
+
+        accelerometerSample.value = sample
+        onSample(sample)
+      }
+
+      window.addEventListener('deviceorientation', handleDeviceOrientationFallback)
+      cleanups.push(() => window.removeEventListener('deviceorientation', handleDeviceOrientationFallback))
+    }
   }
 
   return {

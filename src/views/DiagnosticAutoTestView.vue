@@ -184,6 +184,145 @@
             </div>
           </section>
 
+          <section v-else-if="isAccelerometerTest && guidedState.phase === 'active'" class="space-y-4">
+            <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Inclinaison</p>
+              <h2 class="mt-2 text-2xl font-bold text-slate-950">Incline le telephone a plat</h2>
+              <p class="mt-2 text-sm leading-6 text-slate-600">
+                Garde le telephone face a toi puis penche-le a gauche, a droite, vers le haut et vers le bas.
+              </p>
+              <p class="mt-3 text-sm font-medium" :class="sensorPermissionState === 'denied' ? 'text-amber-700' : 'text-slate-700'">
+                {{
+                  sensorPermissionState === 'denied'
+                    ? 'Permission mouvement refusee. Tu peux tout de meme passer au verdict final.'
+                    : 'Le test avance seul des que les quatre directions sont detectees.'
+                }}
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div
+                v-for="direction in [
+                  { key: 'up', label: 'Haut' },
+                  { key: 'down', label: 'Bas' },
+                  { key: 'left', label: 'Gauche' },
+                  { key: 'right', label: 'Droite' }
+                ]"
+                :key="direction.key"
+                class="rounded-[20px] border px-4 py-4"
+                :class="accelerometerObservedTilts.includes(direction.key) ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'"
+              >
+                <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="accelerometerObservedTilts.includes(direction.key) ? 'text-emerald-700' : 'text-slate-500'">
+                  {{ direction.label }}
+                </p>
+                <p class="mt-2 text-sm font-medium" :class="accelerometerObservedTilts.includes(direction.key) ? 'text-emerald-900' : 'text-slate-700'">
+                  {{ accelerometerObservedTilts.includes(direction.key) ? 'Observee' : 'En attente' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr]">
+              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Direction courante</p>
+                <p class="mt-3 text-2xl font-bold text-slate-950">{{ formatAccelerometerTilt(accelerometerCurrentTilt) }}</p>
+                <p class="mt-2 text-sm text-slate-600">
+                  {{ accelerometerTiltReady ? 'Les quatre directions ont ete detectees.' : 'Le test attend encore des inclinaisons manquantes.' }}
+                </p>
+              </div>
+
+              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Repere visuel</p>
+                <div class="mt-5 flex justify-center">
+                  <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
+                    <div
+                      class="h-40 w-28 rounded-[22px] border border-stone-300 bg-white transition-transform duration-300"
+                      :style="{
+                        transform:
+                          accelerometerCurrentTilt === 'left'
+                            ? 'rotate(-10deg) translateX(-10px)'
+                            : accelerometerCurrentTilt === 'right'
+                              ? 'rotate(10deg) translateX(10px)'
+                              : accelerometerCurrentTilt === 'up'
+                                ? 'translateY(-10px)'
+                                : accelerometerCurrentTilt === 'down'
+                                  ? 'translateY(10px)'
+                                  : 'translateY(0)'
+                      }"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section v-else-if="isGyroscopeTest && guidedState.phase === 'active'" class="space-y-4">
+            <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Rotation</p>
+              <h2 class="mt-2 text-2xl font-bold text-slate-950">Fais pivoter le telephone</h2>
+              <p class="mt-2 text-sm leading-6 text-slate-600">
+                Tourne le telephone autour de lui-meme dans plusieurs orientations pour reveiller les trois axes gyroscopiques.
+              </p>
+              <p class="mt-3 text-sm font-medium" :class="sensorPermissionState === 'denied' ? 'text-amber-700' : 'text-slate-700'">
+                {{
+                  sensorPermissionState === 'denied'
+                    ? 'Permission mouvement refusee. Tu peux tout de meme passer au verdict final.'
+                    : 'Le test avance seul des que les trois axes sont detectes.'
+                }}
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div
+                v-for="axis in [
+                  { key: 'alpha', label: 'Axe alpha' },
+                  { key: 'beta', label: 'Axe beta' },
+                  { key: 'gamma', label: 'Axe gamma' }
+                ]"
+                :key="axis.key"
+                class="rounded-[20px] border px-4 py-4"
+                :class="gyroscopeObservedAxes.includes(axis.key) ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'"
+              >
+                <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="gyroscopeObservedAxes.includes(axis.key) ? 'text-emerald-700' : 'text-slate-500'">
+                  {{ axis.label }}
+                </p>
+                <p class="mt-2 text-sm font-medium" :class="gyroscopeObservedAxes.includes(axis.key) ? 'text-emerald-900' : 'text-slate-700'">
+                  {{ gyroscopeObservedAxes.includes(axis.key) ? 'Observe' : 'En attente' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr]">
+              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Axe courant</p>
+                <p class="mt-3 text-2xl font-bold text-slate-950">{{ formatGyroscopeAxis(gyroscopeCurrentAxis) }}</p>
+                <p class="mt-2 text-sm text-slate-600">
+                  {{ gyroscopeAxesReady ? 'Les trois axes ont ete detectes.' : 'Le test attend encore des rotations manquantes.' }}
+                </p>
+              </div>
+
+              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Repere visuel</p>
+                <div class="mt-5 flex justify-center">
+                  <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
+                    <div
+                      class="h-40 w-28 rounded-[22px] border border-stone-300 bg-white transition-transform duration-300"
+                      :style="{
+                        transform:
+                          gyroscopeCurrentAxis === 'alpha'
+                            ? 'rotate(14deg)'
+                            : gyroscopeCurrentAxis === 'beta'
+                              ? 'rotateX(24deg)'
+                              : gyroscopeCurrentAxis === 'gamma'
+                                ? 'rotateY(24deg)'
+                                : 'rotate(0deg)'
+                      }"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section v-else-if="isSensorTest && guidedState.phase === 'active'">
             <SensorLivePanel
               :title="sensorPanelTitle"
@@ -259,6 +398,37 @@
                 <p class="mt-2 text-xl font-bold text-slate-950">
                   {{ guidedState.metrics.completedAutomatically ? 'automatique' : '5 taps' }}
                 </p>
+              </div>
+            </div>
+
+            <div v-else-if="isGyroscopeTest" class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div
+                v-for="axis in [
+                  { key: 'alpha', label: 'Axe alpha' },
+                  { key: 'beta', label: 'Axe beta' },
+                  { key: 'gamma', label: 'Axe gamma' }
+                ]"
+                :key="axis.key"
+                class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3"
+              >
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{{ axis.label }}</p>
+                <p class="mt-2 text-xl font-bold text-slate-950">{{ gyroscopeObservedAxes.includes(axis.key) ? 'observe' : 'non vu' }}</p>
+              </div>
+            </div>
+
+            <div v-else-if="isAccelerometerTest" class="mt-5 grid grid-cols-2 gap-3">
+              <div
+                v-for="direction in [
+                  { key: 'up', label: 'Haut' },
+                  { key: 'down', label: 'Bas' },
+                  { key: 'left', label: 'Gauche' },
+                  { key: 'right', label: 'Droite' }
+                ]"
+                :key="direction.key"
+                class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3"
+              >
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{{ direction.label }}</p>
+                <p class="mt-2 text-xl font-bold text-slate-950">{{ accelerometerObservedTilts.includes(direction.key) ? 'observee' : 'non vue' }}</p>
               </div>
             </div>
 
@@ -382,6 +552,22 @@
         </AppButton>
 
         <AppButton
+          v-else-if="isGyroscopeTest && guidedState?.phase === 'active'"
+          class="flex-1"
+          @click="finishSensorCollection"
+        >
+          Passer a la validation
+        </AppButton>
+
+        <AppButton
+          v-else-if="isAccelerometerTest && guidedState?.phase === 'active'"
+          class="flex-1"
+          @click="finishSensorCollection"
+        >
+          Passer a la validation
+        </AppButton>
+
+        <AppButton
           v-else-if="isMultitouchTest && guidedState?.phase === 'active'"
           class="flex-1"
           @click="finishMultitouchCollection"
@@ -477,7 +663,9 @@ const currentIndex = computed(() => session.value?.steps.findIndex((entry) => en
 const guidedState = computed(() => step.value?.guidedState ?? null)
 const currentGuidedSubStep = computed(() => store.getCurrentGuidedSubStep(props.sessionId, props.testId))
 const isRotationTest = computed(() => props.testId === 'rotation')
-const isSensorTest = computed(() => ['accelerometer', 'gyroscope', 'compass', 'gps'].includes(props.testId))
+const isAccelerometerTest = computed(() => props.testId === 'accelerometer')
+const isGyroscopeTest = computed(() => props.testId === 'gyroscope')
+const isSensorTest = computed(() => ['compass', 'gps'].includes(props.testId))
 const isCameraCaptureTest = computed(() => ['camera-rear', 'camera-front'].includes(props.testId))
 const isAutofocusTest = computed(() => props.testId === 'autofocus')
 const isMicrophoneTest = computed(() => props.testId === 'microphone')
@@ -528,7 +716,7 @@ const isLastGuidedSubStep = computed(() => {
   return guidedState.value.currentStepIndex >= guidedState.value.steps.length - 1
 })
 const requiresSystemPermission = computed(() =>
-  ['accelerometer', 'gyroscope', 'compass', 'gps', 'camera-rear', 'camera-front', 'autofocus', 'microphone'].includes(
+  ['compass', 'gps', 'camera-rear', 'camera-front', 'autofocus', 'microphone'].includes(
     props.testId
   )
 )
@@ -572,6 +760,18 @@ const rotationObservedOrientations = computed(() => {
 const rotationHasPortrait = computed(() => rotationObservedOrientations.value.includes('portrait'))
 const rotationHasLandscape = computed(() => rotationObservedOrientations.value.includes('landscape'))
 const rotationUiReady = computed(() => rotationHasPortrait.value && rotationHasLandscape.value)
+const accelerometerCurrentTilt = computed(() => String(guidedState.value?.metrics.currentTilt ?? 'none'))
+const accelerometerObservedTilts = computed(() => {
+  const value = guidedState.value?.metrics.observedTilts
+  return Array.isArray(value) ? value : []
+})
+const accelerometerTiltReady = computed(() => ['left', 'right', 'up', 'down'].every((direction) => accelerometerObservedTilts.value.includes(direction)))
+const gyroscopeCurrentAxis = computed(() => String(guidedState.value?.metrics.currentAxis ?? 'none'))
+const gyroscopeObservedAxes = computed(() => {
+  const value = guidedState.value?.metrics.observedAxes
+  return Array.isArray(value) ? value : []
+})
+const gyroscopeAxesReady = computed(() => ['alpha', 'beta', 'gamma'].every((axis) => gyroscopeObservedAxes.value.includes(axis)))
 const microphoneLevel = computed(() => Number(guidedState.value?.metrics.level ?? microphoneRuntime.level.value))
 const microphonePeakLevel = computed(() => Number(guidedState.value?.metrics.peakLevel ?? microphoneRuntime.peakLevel.value))
 const microphoneSoundDetected = computed(() => Boolean(guidedState.value?.metrics.soundDetected))
@@ -625,46 +825,10 @@ const sensorPanelVariant = computed<'sensor' | 'compass' | 'gps'>(() => {
 })
 
 const sensorAxisEntries = computed(() => {
-  if (props.testId === 'accelerometer') {
-    return [
-      { label: 'X', value: Number(guidedState.value?.metrics.x ?? 0) },
-      { label: 'Y', value: Number(guidedState.value?.metrics.y ?? 0) },
-      { label: 'Z', value: Number(guidedState.value?.metrics.z ?? 0) }
-    ]
-  }
-
-  if (props.testId === 'gyroscope') {
-    return [
-      { label: 'Alpha', value: Number(guidedState.value?.metrics.alpha ?? 0) },
-      { label: 'Beta', value: Number(guidedState.value?.metrics.beta ?? 0) },
-      { label: 'Gamma', value: Number(guidedState.value?.metrics.gamma ?? 0) }
-    ]
-  }
-
   return []
 })
 
 const sensorInfoEntries = computed(() => {
-  if (props.testId === 'accelerometer') {
-    return [
-      { label: 'Permission', value: sensorPermissionState.value },
-      { label: 'Amplitude X max', value: Number(guidedState.value?.metrics.maxAbsX ?? 0).toFixed(2) },
-      { label: 'Amplitude Y max', value: Number(guidedState.value?.metrics.maxAbsY ?? 0).toFixed(2) },
-      { label: 'Amplitude Z max', value: Number(guidedState.value?.metrics.maxAbsZ ?? 0).toFixed(2) },
-      { label: 'Variation', value: Boolean(guidedState.value?.metrics.variationDetected) ? 'detectee' : 'faible' }
-    ]
-  }
-
-  if (props.testId === 'gyroscope') {
-    return [
-      { label: 'Permission', value: sensorPermissionState.value },
-      { label: 'Rotation alpha max', value: Number(guidedState.value?.metrics.maxAbsAlpha ?? 0).toFixed(2) },
-      { label: 'Rotation beta max', value: Number(guidedState.value?.metrics.maxAbsBeta ?? 0).toFixed(2) },
-      { label: 'Rotation gamma max', value: Number(guidedState.value?.metrics.maxAbsGamma ?? 0).toFixed(2) },
-      { label: 'Variation', value: Boolean(guidedState.value?.metrics.variationDetected) ? 'detectee' : 'faible' }
-    ]
-  }
-
   if (props.testId === 'compass') {
     return [
       { label: 'Permission', value: sensorPermissionState.value },
@@ -686,14 +850,6 @@ const sensorInfoEntries = computed(() => {
 })
 
 const sensorPhoneRotation = computed(() => {
-  if (props.testId === 'accelerometer') {
-    return {
-      x: Number(guidedState.value?.metrics.x ?? 0) * 3,
-      y: Number(guidedState.value?.metrics.y ?? 0) * 3,
-      z: Number(guidedState.value?.metrics.z ?? 0) * 1.5
-    }
-  }
-
   return {
     x: Number(guidedState.value?.metrics.beta ?? 0) * 0.5,
     y: Number(guidedState.value?.metrics.gamma ?? 0) * 0.5,
@@ -702,26 +858,10 @@ const sensorPhoneRotation = computed(() => {
 })
 
 const sensorMaxValue = computed(() => {
-  if (props.testId === 'accelerometer') {
-    return 12
-  }
-
-  if (props.testId === 'gyroscope') {
-    return 90
-  }
-
   return 360
 })
 
 const sensorPanelTitle = computed(() => {
-  if (props.testId === 'accelerometer') {
-    return 'Accelerometre live'
-  }
-
-  if (props.testId === 'gyroscope') {
-    return 'Gyroscope live'
-  }
-
   if (props.testId === 'compass') {
     return 'Boussole live'
   }
@@ -730,14 +870,6 @@ const sensorPanelTitle = computed(() => {
 })
 
 const sensorPanelHint = computed(() => {
-  if (props.testId === 'accelerometer') {
-    return 'Incline doucement le telephone pour faire varier X, Y et Z.'
-  }
-
-  if (props.testId === 'gyroscope') {
-    return 'Fais pivoter le telephone pour voir varier les vitesses de rotation.'
-  }
-
   if (props.testId === 'compass') {
     return 'Tourne doucement le telephone pour verifier que le nord reste stable et lisible.'
   }
@@ -802,6 +934,14 @@ const helperText = computed(() => {
     return "Fais pivoter l'interface entre portrait et paysage."
   }
 
+  if (isAccelerometerTest.value) {
+    return 'Autorise le mouvement puis incline le telephone dans quatre directions.'
+  }
+
+  if (isGyroscopeTest.value) {
+    return 'Autorise le mouvement puis fais pivoter le telephone autour de lui-meme.'
+  }
+
   if (testDefinition.value?.mode === 'guided') {
     return 'Suis l’action affichee.'
   }
@@ -844,6 +984,14 @@ const confirmationTitle = computed(() => {
     return 'Verdict rotation final'
   }
 
+  if (isAccelerometerTest.value) {
+    return 'Verdict accelerometre final'
+  }
+
+  if (isGyroscopeTest.value) {
+    return 'Verdict gyroscope final'
+  }
+
   if (props.testId === 'touch') {
     return 'Verdict tactile final'
   }
@@ -880,6 +1028,14 @@ const confirmationText = computed(() => {
     return "Confirme que l'interface tourne correctement."
   }
 
+  if (isAccelerometerTest.value) {
+    return "Confirme que les inclinaisons ont bien ete detectees."
+  }
+
+  if (isGyroscopeTest.value) {
+    return 'Confirme que les trois axes de rotation ont bien reagi.'
+  }
+
   if (props.testId === 'touch') {
     return 'Confirme le ressenti tactile.'
   }
@@ -908,7 +1064,7 @@ const confirmationText = computed(() => {
 })
 
 const launchButtonLabel = computed(() => {
-  if (isSensorTest.value || isMediaTest.value || isMicrophoneTest.value) {
+  if (isAccelerometerTest.value || isGyroscopeTest.value || isSensorTest.value || isMediaTest.value || isMicrophoneTest.value) {
     return 'Autoriser'
   }
 
@@ -932,6 +1088,57 @@ const mediaPrimaryActionLabel = computed(() => {
 })
 
 const motionStateToMetric = (state: MotionPermissionState) => state
+
+const getAccelerometerTilt = (sample: AccelerometerSample, threshold: number) => {
+  const absX = Math.abs(sample.x)
+  const absY = Math.abs(sample.y)
+
+  if (absX < threshold && absY < threshold) {
+    return 'none'
+  }
+
+  if (absX >= absY) {
+    return sample.x >= 0 ? 'right' : 'left'
+  }
+
+  return sample.y >= 0 ? 'down' : 'up'
+}
+
+const formatAccelerometerTilt = (tilt: string) => {
+  if (tilt === 'left') return 'gauche'
+  if (tilt === 'right') return 'droite'
+  if (tilt === 'up') return 'haut'
+  if (tilt === 'down') return 'bas'
+  return 'aucune'
+}
+
+const getGyroscopeAxis = (sample: GyroscopeSample, threshold: number) => {
+  const alpha = Math.abs(sample.alpha)
+  const beta = Math.abs(sample.beta)
+  const gamma = Math.abs(sample.gamma)
+  const maxValue = Math.max(alpha, beta, gamma)
+
+  if (maxValue < threshold) {
+    return 'none'
+  }
+
+  if (maxValue === alpha) {
+    return 'alpha'
+  }
+
+  if (maxValue === beta) {
+    return 'beta'
+  }
+
+  return 'gamma'
+}
+
+const formatGyroscopeAxis = (axis: string) => {
+  if (axis === 'alpha') return 'alpha'
+  if (axis === 'beta') return 'beta'
+  if (axis === 'gamma') return 'gamma'
+  return 'aucun'
+}
 
 const getUiOrientationKind = () => {
   if (typeof window === 'undefined') {
@@ -1203,6 +1410,120 @@ const launchGuidedTest = async () => {
       return
     }
 
+    if (isAccelerometerTest.value) {
+      const permission = await sensorRuntime.requestPermission('accelerometer')
+
+      store.updateGuidedMetrics(
+        props.sessionId,
+        props.testId,
+        {
+          permissionState: motionStateToMetric(permission),
+          supported: sensorRuntime.supported.value,
+          currentTilt: 'none',
+          observedTilts: []
+        },
+        { persist: true }
+      )
+
+      if (permission === 'denied' || permission === 'not_supported') {
+        return
+      }
+
+      sensorRuntime.startListening(
+        'accelerometer',
+        (sample) => {
+          const accelerometer = sample as AccelerometerSample
+          const threshold = Number(guidedState.value?.metrics.threshold ?? 2)
+          const currentTilt = getAccelerometerTilt(accelerometer, threshold)
+          const observedTilts = Array.from(
+            new Set([...accelerometerObservedTilts.value, currentTilt].filter((value) => value !== 'none'))
+          )
+
+          store.updateGuidedMetrics(
+            props.sessionId,
+            props.testId,
+            {
+              supported: true,
+              permissionState: sensorRuntime.permissionState.value,
+              x: accelerometer.x,
+              y: accelerometer.y,
+              z: accelerometer.z,
+              currentTilt,
+              observedTilts
+            },
+            { persist: false }
+          )
+
+          if (
+            ['left', 'right', 'up', 'down'].every((direction) => observedTilts.includes(direction)) &&
+            guidedState.value?.phase === 'active'
+          ) {
+            sensorRuntime.stopListening()
+            store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+          }
+        },
+        updateFromSensorError
+      )
+      return
+    }
+
+    if (isGyroscopeTest.value) {
+      const permission = await sensorRuntime.requestPermission('gyroscope')
+
+      store.updateGuidedMetrics(
+        props.sessionId,
+        props.testId,
+        {
+          permissionState: motionStateToMetric(permission),
+          supported: sensorRuntime.supported.value,
+          currentAxis: 'none',
+          observedAxes: []
+        },
+        { persist: true }
+      )
+
+      if (permission === 'denied' || permission === 'not_supported') {
+        return
+      }
+
+      sensorRuntime.startListening(
+        'gyroscope',
+        (sample) => {
+          const gyroscope = sample as GyroscopeSample
+          const threshold = Number(guidedState.value?.metrics.threshold ?? 15)
+          const currentAxis = getGyroscopeAxis(gyroscope, threshold)
+          const observedAxes = Array.from(
+            new Set([...gyroscopeObservedAxes.value, currentAxis].filter((value) => value !== 'none'))
+          )
+
+          store.updateGuidedMetrics(
+            props.sessionId,
+            props.testId,
+            {
+              supported: true,
+              permissionState: sensorRuntime.permissionState.value,
+              alpha: gyroscope.alpha,
+              beta: gyroscope.beta,
+              gamma: gyroscope.gamma,
+              currentAxis,
+              observedAxes
+            },
+            { persist: false }
+          )
+
+          if (
+            ['alpha', 'beta', 'gamma'].every((axis) => observedAxes.includes(axis)) &&
+            guidedState.value?.phase === 'active'
+          ) {
+            sensorRuntime.stopListening()
+            store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+          }
+        },
+        updateFromSensorError
+      )
+      return
+    }
+
     if (isMediaTest.value) {
       await launchCameraTest()
       return
@@ -1237,58 +1558,6 @@ const launchGuidedTest = async () => {
     sensorRuntime.startListening(
       sensorMode.value,
       (sample) => {
-      if (sensorMode.value === 'accelerometer') {
-        const accelerometer = sample as AccelerometerSample
-        const maxAbsX = Math.max(Math.abs(accelerometer.x), Number(guidedState.value?.metrics.maxAbsX ?? 0))
-        const maxAbsY = Math.max(Math.abs(accelerometer.y), Number(guidedState.value?.metrics.maxAbsY ?? 0))
-        const maxAbsZ = Math.max(Math.abs(accelerometer.z), Number(guidedState.value?.metrics.maxAbsZ ?? 0))
-        const threshold = Number(guidedState.value?.metrics.threshold ?? 2)
-
-        store.updateGuidedMetrics(
-          props.sessionId,
-          props.testId,
-          {
-            supported: true,
-            permissionState: sensorRuntime.permissionState.value,
-            x: accelerometer.x,
-            y: accelerometer.y,
-            z: accelerometer.z,
-            maxAbsX,
-            maxAbsY,
-            maxAbsZ,
-            variationDetected: maxAbsX >= threshold || maxAbsY >= threshold || maxAbsZ >= threshold
-          },
-          { persist: false }
-        )
-        return
-      }
-
-      if (sensorMode.value === 'gyroscope') {
-        const gyroscope = sample as GyroscopeSample
-        const maxAbsAlpha = Math.max(Math.abs(gyroscope.alpha), Number(guidedState.value?.metrics.maxAbsAlpha ?? 0))
-        const maxAbsBeta = Math.max(Math.abs(gyroscope.beta), Number(guidedState.value?.metrics.maxAbsBeta ?? 0))
-        const maxAbsGamma = Math.max(Math.abs(gyroscope.gamma), Number(guidedState.value?.metrics.maxAbsGamma ?? 0))
-        const threshold = Number(guidedState.value?.metrics.threshold ?? 15)
-
-        store.updateGuidedMetrics(
-          props.sessionId,
-          props.testId,
-          {
-            supported: true,
-            permissionState: sensorRuntime.permissionState.value,
-            alpha: gyroscope.alpha,
-            beta: gyroscope.beta,
-            gamma: gyroscope.gamma,
-            maxAbsAlpha,
-            maxAbsBeta,
-            maxAbsGamma,
-            variationDetected: maxAbsAlpha >= threshold || maxAbsBeta >= threshold || maxAbsGamma >= threshold
-          },
-          { persist: false }
-        )
-        return
-      }
-
       if (sensorMode.value === 'compass') {
         const compass = sample as CompassSample
         const heading = typeof compass.heading === 'number' ? Math.round(compass.heading) : null

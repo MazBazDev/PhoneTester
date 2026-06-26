@@ -13,15 +13,33 @@ describe('useGyroscopeTest', () => {
     state.startedAt = '2025-01-01T00:00:00.000Z'
     state.metrics.supported = true
     state.metrics.permissionState = 'granted'
-    state.metrics.maxAbsAlpha = 18
-    state.metrics.maxAbsBeta = 9
-    state.metrics.maxAbsGamma = 26
-    state.metrics.variationDetected = true
+    state.metrics.currentAxis = 'gamma'
+    state.metrics.observedAxes = ['alpha', 'beta', 'gamma']
     state.userVerdict = 'pass'
 
     const result = definition.finalizeGuidedResult(state)
 
     expect(result.status).toBe('pass')
-    expect(result.details[4]?.value).toBe('oui')
+    expect(result.details[2]?.value).toContain('alpha')
+  })
+
+  it('returns warning when only some axes are observed', () => {
+    const definition = useGyroscopeTest()
+    const state = definition.createGuidedState?.()
+
+    if (!state || !definition.finalizeGuidedResult) {
+      throw new Error('gyroscope test unavailable')
+    }
+
+    state.startedAt = '2025-01-01T00:00:00.000Z'
+    state.metrics.supported = true
+    state.metrics.permissionState = 'granted'
+    state.metrics.currentAxis = 'alpha'
+    state.metrics.observedAxes = ['alpha', 'beta']
+    state.userVerdict = 'pass'
+
+    const result = definition.finalizeGuidedResult(state)
+
+    expect(result.status).toBe('warning')
   })
 })

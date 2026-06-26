@@ -102,6 +102,92 @@ describe('DiagnosticAutoTestView', () => {
     expect(wrapper.text()).not.toContain('Autoriser')
   })
 
+  it('does not auto-start the accelerometer test on entry', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/accelerometer`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'accelerometer'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'accelerometer')?.guidedState?.phase).toBe('idle')
+    expect(wrapper.text()).toContain('Autoriser')
+  })
+
+  it('does not auto-start the gyroscope test on entry', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/gyroscope`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'gyroscope'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'gyroscope')?.guidedState?.phase).toBe('idle')
+    expect(wrapper.text()).toContain('Autoriser')
+  })
+
   it('renders the center screen probe and exits fullscreen on double tap', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -374,5 +460,160 @@ describe('DiagnosticAutoTestView', () => {
 
     expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('confirm')
     expect(wrapper.text()).toContain('Verdict rotation final')
+  })
+
+  it('moves accelerometer to confirm after four tilt directions are observed', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    let deviceMotionHandler: ((event: Event) => void) | undefined
+    const originalAddEventListener = window.addEventListener.bind(window)
+    const originalRemoveEventListener = window.removeEventListener.bind(window)
+
+    Object.defineProperty(window, 'DeviceMotionEvent', {
+      configurable: true,
+      value: class DeviceMotionEvent {}
+    })
+    Object.defineProperty(window, 'addEventListener', {
+      configurable: true,
+      value: ((type: string, listener: EventListenerOrEventListenerObject, options?: AddEventListenerOptions | boolean) => {
+        if (type === 'devicemotion' && typeof listener === 'function') {
+          deviceMotionHandler = listener as (event: Event) => void
+        }
+
+        return originalAddEventListener(type, listener, options)
+      }) as typeof window.addEventListener
+    })
+    Object.defineProperty(window, 'removeEventListener', {
+      configurable: true,
+      value: ((type: string, listener: EventListenerOrEventListenerObject, options?: EventListenerOptions | boolean) =>
+        originalRemoveEventListener(type, listener, options)) as typeof window.removeEventListener
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/accelerometer`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'accelerometer'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Autoriser')?.trigger('click')
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'accelerometer')?.guidedState?.phase).toBe('active')
+    expect(deviceMotionHandler).toBeDefined()
+
+    deviceMotionHandler?.({ accelerationIncludingGravity: { x: -3, y: 0, z: 9 } } as unknown as Event)
+    deviceMotionHandler?.({ accelerationIncludingGravity: { x: 3, y: 0, z: 9 } } as unknown as Event)
+    deviceMotionHandler?.({ accelerationIncludingGravity: { x: 0, y: -3, z: 9 } } as unknown as Event)
+    deviceMotionHandler?.({ accelerationIncludingGravity: { x: 0, y: 3, z: 9 } } as unknown as Event)
+    await nextTick()
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'accelerometer')?.guidedState?.phase).toBe('confirm')
+    expect(wrapper.text()).toContain('Verdict accelerometre final')
+  })
+
+  it('moves gyroscope to confirm after three axes are observed', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    let deviceMotionHandler: ((event: Event) => void) | undefined
+    const originalAddEventListener = window.addEventListener.bind(window)
+    const originalRemoveEventListener = window.removeEventListener.bind(window)
+
+    Object.defineProperty(window, 'DeviceMotionEvent', {
+      configurable: true,
+      value: class DeviceMotionEvent {}
+    })
+    Object.defineProperty(window, 'addEventListener', {
+      configurable: true,
+      value: ((type: string, listener: EventListenerOrEventListenerObject, options?: AddEventListenerOptions | boolean) => {
+        if (type === 'devicemotion' && typeof listener === 'function') {
+          deviceMotionHandler = listener as (event: Event) => void
+        }
+
+        return originalAddEventListener(type, listener, options)
+      }) as typeof window.addEventListener
+    })
+    Object.defineProperty(window, 'removeEventListener', {
+      configurable: true,
+      value: ((type: string, listener: EventListenerOrEventListenerObject, options?: EventListenerOptions | boolean) =>
+        originalRemoveEventListener(type, listener, options)) as typeof window.removeEventListener
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/gyroscope`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'gyroscope'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Autoriser')?.trigger('click')
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'gyroscope')?.guidedState?.phase).toBe('active')
+    expect(deviceMotionHandler).toBeDefined()
+
+    deviceMotionHandler?.({ rotationRate: { alpha: 20, beta: 0, gamma: 0 } } as unknown as Event)
+    deviceMotionHandler?.({ rotationRate: { alpha: 0, beta: 20, gamma: 0 } } as unknown as Event)
+    deviceMotionHandler?.({ rotationRate: { alpha: 0, beta: 0, gamma: 20 } } as unknown as Event)
+    await nextTick()
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'gyroscope')?.guidedState?.phase).toBe('confirm')
+    expect(wrapper.text()).toContain('Verdict gyroscope final')
   })
 })

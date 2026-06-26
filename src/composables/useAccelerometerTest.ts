@@ -8,26 +8,31 @@ import type {
 
 const MOTION_THRESHOLD = 2
 
+const formatTilt = (tilt: string) => {
+  if (tilt === 'left') return 'gauche'
+  if (tilt === 'right') return 'droite'
+  if (tilt === 'up') return 'haut'
+  if (tilt === 'down') return 'bas'
+  return 'aucune'
+}
+
 const buildAccelerometerDetails = (state: DiagnosticGuidedState): DiagnosticTestDetail[] => {
   const permissionState = String(state.metrics.permissionState ?? 'unknown')
-  const maxAbsX = Number(state.metrics.maxAbsX ?? 0).toFixed(2)
-  const maxAbsY = Number(state.metrics.maxAbsY ?? 0).toFixed(2)
-  const maxAbsZ = Number(state.metrics.maxAbsZ ?? 0).toFixed(2)
-  const variationDetected = Boolean(state.metrics.variationDetected)
+  const currentTilt = String(state.metrics.currentTilt ?? 'none')
+  const observedTilts = Array.isArray(state.metrics.observedTilts) ? state.metrics.observedTilts : []
 
   return [
     { label: 'Permission mouvement', value: permissionState },
-    { label: 'Amplitude X', value: maxAbsX },
-    { label: 'Amplitude Y', value: maxAbsY },
-    { label: 'Amplitude Z', value: maxAbsZ },
-    { label: 'Variation detectee', value: variationDetected ? 'oui' : 'non' }
+    { label: 'Inclinaison courante', value: formatTilt(currentTilt) },
+    { label: 'Directions observees', value: observedTilts.length > 0 ? observedTilts.map((tilt) => formatTilt(String(tilt))).join(', ') : 'aucune' }
   ]
 }
 
 const buildAccelerometerStatus = (state: DiagnosticGuidedState): TestStatus => {
   const supported = Boolean(state.metrics.supported)
   const permissionState = String(state.metrics.permissionState ?? 'unknown')
-  const variationDetected = Boolean(state.metrics.variationDetected)
+  const observedTilts = Array.isArray(state.metrics.observedTilts) ? state.metrics.observedTilts : []
+  const completed = ['left', 'right', 'up', 'down'].every((direction) => observedTilts.includes(direction))
 
   if (!supported || permissionState === 'not_supported') {
     return 'not_supported'
@@ -41,7 +46,7 @@ const buildAccelerometerStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'warning'
   }
 
-  if (variationDetected && state.userVerdict === 'pass') {
+  if (completed && state.userVerdict === 'pass') {
     return 'pass'
   }
 
@@ -51,7 +56,7 @@ const buildAccelerometerStatus = (state: DiagnosticGuidedState): TestStatus => {
 export const useAccelerometerTest = (): DiagnosticTestDefinition => ({
   id: 'accelerometer',
   name: 'Accelerometre',
-  description: 'Affiche les axes X/Y/Z en temps reel et verifie une vraie variation de mouvement.',
+  description: "Verifie que le telephone reagit bien a une inclinaison a plat dans les quatre directions.",
   icon: 'activity',
   mode: 'guided',
   createGuidedState: () => ({
@@ -61,8 +66,8 @@ export const useAccelerometerTest = (): DiagnosticTestDefinition => ({
     steps: [
       {
         id: 'accelerometer-live',
-        label: 'Capteur live',
-        instruction: 'Incline et bouge legerement le telephone pour voir varier les 3 axes.',
+        label: 'Inclinaisons',
+        instruction: 'Garde le telephone face a toi et incline-le a gauche, a droite, vers le haut et vers le bas.',
         status: 'pending',
         response: null
       }
@@ -73,24 +78,23 @@ export const useAccelerometerTest = (): DiagnosticTestDefinition => ({
       x: 0,
       y: 0,
       z: 0,
-      maxAbsX: 0,
-      maxAbsY: 0,
-      maxAbsZ: 0,
-      variationDetected: false,
+      currentTilt: 'none',
+      observedTilts: [],
       threshold: MOTION_THRESHOLD
     },
     userVerdict: null
   }),
   finalizeGuidedResult: (state: DiagnosticGuidedState): DiagnosticTestRunResult => {
     const status = buildAccelerometerStatus(state)
-    const variationDetected = Boolean(state.metrics.variationDetected)
+    const observedTilts = Array.isArray(state.metrics.observedTilts) ? state.metrics.observedTilts : []
+    const completed = ['left', 'right', 'up', 'down'].every((direction) => observedTilts.includes(direction))
 
     return {
       testId: 'accelerometer',
       status,
-      summary: variationDetected
-        ? 'Le capteur a montre une variation nette sur les axes mesures.'
-        : 'La variation des axes reste faible ou incertaine sur ce test.',
+      summary: completed
+        ? "Les quatre inclinaisons attendues ont bien ete detectees."
+        : "Le test d'inclinaison reste partiel ou incertain.",
       details: buildAccelerometerDetails(state),
       startedAt: state.startedAt ?? new Date().toISOString(),
       finishedAt: new Date().toISOString()

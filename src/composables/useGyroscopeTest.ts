@@ -8,26 +8,30 @@ import type {
 
 const ROTATION_RATE_THRESHOLD = 15
 
+const formatAxis = (axis: string) => {
+  if (axis === 'alpha') return 'alpha'
+  if (axis === 'beta') return 'beta'
+  if (axis === 'gamma') return 'gamma'
+  return 'aucun'
+}
+
 const buildGyroscopeDetails = (state: DiagnosticGuidedState): DiagnosticTestDetail[] => {
   const permissionState = String(state.metrics.permissionState ?? 'unknown')
-  const maxAbsAlpha = Number(state.metrics.maxAbsAlpha ?? 0).toFixed(2)
-  const maxAbsBeta = Number(state.metrics.maxAbsBeta ?? 0).toFixed(2)
-  const maxAbsGamma = Number(state.metrics.maxAbsGamma ?? 0).toFixed(2)
-  const variationDetected = Boolean(state.metrics.variationDetected)
+  const currentAxis = String(state.metrics.currentAxis ?? 'none')
+  const observedAxes = Array.isArray(state.metrics.observedAxes) ? state.metrics.observedAxes : []
 
   return [
     { label: 'Permission mouvement', value: permissionState },
-    { label: 'Rotation alpha max', value: maxAbsAlpha },
-    { label: 'Rotation beta max', value: maxAbsBeta },
-    { label: 'Rotation gamma max', value: maxAbsGamma },
-    { label: 'Rotation detectee', value: variationDetected ? 'oui' : 'non' }
+    { label: 'Axe courant', value: formatAxis(currentAxis) },
+    { label: 'Axes observes', value: observedAxes.length > 0 ? observedAxes.map((axis) => formatAxis(String(axis))).join(', ') : 'aucun' }
   ]
 }
 
 const buildGyroscopeStatus = (state: DiagnosticGuidedState): TestStatus => {
   const supported = Boolean(state.metrics.supported)
   const permissionState = String(state.metrics.permissionState ?? 'unknown')
-  const variationDetected = Boolean(state.metrics.variationDetected)
+  const observedAxes = Array.isArray(state.metrics.observedAxes) ? state.metrics.observedAxes : []
+  const completed = ['alpha', 'beta', 'gamma'].every((axis) => observedAxes.includes(axis))
 
   if (!supported || permissionState === 'not_supported') {
     return 'not_supported'
@@ -41,7 +45,7 @@ const buildGyroscopeStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'warning'
   }
 
-  if (variationDetected && state.userVerdict === 'pass') {
+  if (completed && state.userVerdict === 'pass') {
     return 'pass'
   }
 
@@ -51,7 +55,7 @@ const buildGyroscopeStatus = (state: DiagnosticGuidedState): TestStatus => {
 export const useGyroscopeTest = (): DiagnosticTestDefinition => ({
   id: 'gyroscope',
   name: 'Gyroscope',
-  description: 'Observe les vitesses de rotation temps reel pour confirmer le gyroscope.',
+  description: 'Verifie que le telephone detecte bien des rotations sur les trois axes du gyroscope.',
   icon: 'gyro',
   mode: 'guided',
   createGuidedState: () => ({
@@ -61,8 +65,8 @@ export const useGyroscopeTest = (): DiagnosticTestDefinition => ({
     steps: [
       {
         id: 'gyroscope-live',
-        label: 'Rotation live',
-        instruction: 'Fais pivoter doucement le telephone dans plusieurs directions.',
+        label: 'Rotation multi-axes',
+        instruction: 'Fais pivoter le telephone autour de lui-meme dans plusieurs orientations pour activer les trois axes.',
         status: 'pending',
         response: null
       }
@@ -73,24 +77,23 @@ export const useGyroscopeTest = (): DiagnosticTestDefinition => ({
       alpha: 0,
       beta: 0,
       gamma: 0,
-      maxAbsAlpha: 0,
-      maxAbsBeta: 0,
-      maxAbsGamma: 0,
-      variationDetected: false,
+      currentAxis: 'none',
+      observedAxes: [],
       threshold: ROTATION_RATE_THRESHOLD
     },
     userVerdict: null
   }),
   finalizeGuidedResult: (state: DiagnosticGuidedState): DiagnosticTestRunResult => {
     const status = buildGyroscopeStatus(state)
-    const variationDetected = Boolean(state.metrics.variationDetected)
+    const observedAxes = Array.isArray(state.metrics.observedAxes) ? state.metrics.observedAxes : []
+    const completed = ['alpha', 'beta', 'gamma'].every((axis) => observedAxes.includes(axis))
 
     return {
       testId: 'gyroscope',
       status,
-      summary: variationDetected
-        ? 'Une rotation rate exploitable a ete detectee sur le test.'
-        : 'La rotation rate reste trop faible ou indisponible sur ce test.',
+      summary: completed
+        ? 'Les trois axes gyroscopiques ont bien montre une rotation exploitable.'
+        : 'Le test gyroscope reste partiel ou incertain.',
       details: buildGyroscopeDetails(state),
       startedAt: state.startedAt ?? new Date().toISOString(),
       finishedAt: new Date().toISOString()
