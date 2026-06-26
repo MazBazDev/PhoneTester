@@ -348,7 +348,7 @@
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Microphone</p>
                     <h2 class="mt-2 text-2xl font-bold text-slate-950">Fais monter le signal audio</h2>
                     <p class="mt-2 text-sm leading-6 text-slate-600">
-                      Parle, souffle ou tapote pres du micro. Le test avance seul des qu’un signal exploitable est detecte.
+                      Parle, souffle ou tapote pres du micro. Verifie que le signal reagit puis passe manuellement a la validation.
                     </p>
                   </div>
                   <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="badgeClass">
@@ -363,6 +363,7 @@
                 :peak-level="microphonePeakLevel"
                 :sound-detected="microphoneSoundDetected"
                 :permission-state="String(guidedState.metrics.permissionState ?? microphoneRuntime.permissionState.value)"
+                :waveform="microphoneWaveform"
               />
 
               <div class="flex justify-end">
@@ -796,6 +797,7 @@ const gyroscopeAxesReady = computed(() => ['alpha', 'beta', 'gamma'].every((axis
 const microphoneLevel = computed(() => Number(guidedState.value?.metrics.level ?? microphoneRuntime.level.value))
 const microphonePeakLevel = computed(() => Number(guidedState.value?.metrics.peakLevel ?? microphoneRuntime.peakLevel.value))
 const microphoneSoundDetected = computed(() => Boolean(guidedState.value?.metrics.soundDetected))
+const microphoneWaveform = computed(() => microphoneRuntime.waveform.value)
 
 const sensorPermissionState = computed<MotionPermissionState | string>(
   () => String(guidedState.value?.metrics.permissionState ?? sensorRuntime.permissionState.value)
@@ -1391,11 +1393,6 @@ const launchMicrophoneTest = async () => {
     peakLevel: microphoneRuntime.peakLevel.value,
     soundDetected: microphoneRuntime.soundDetected.value
   })
-
-  if (microphoneRuntime.soundDetected.value) {
-    microphoneRuntime.stopStream()
-    store.moveGuidedTestToConfirm(props.sessionId, props.testId)
-  }
 }
 
 const retryMicrophoneTest = async () => {
@@ -1870,11 +1867,6 @@ watch(
       },
       { persist: false }
     )
-
-    if (soundDetected) {
-      microphoneRuntime.stopStream()
-      store.moveGuidedTestToConfirm(sessionId, testId)
-    }
   }
 )
 

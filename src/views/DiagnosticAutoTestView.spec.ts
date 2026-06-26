@@ -660,7 +660,7 @@ describe('DiagnosticAutoTestView', () => {
     expect(wrapper.text()).toContain('Verdict gyroscope final')
   })
 
-  it('renders the dedicated microphone live stage after launch', async () => {
+  it('keeps the microphone test active after sound detection and exposes the waveform', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -689,7 +689,7 @@ describe('DiagnosticAutoTestView', () => {
     } as unknown as MediaStream
     const analyser = {
       fftSize: 0,
-      getByteTimeDomainData: vi.fn((array: Uint8Array) => array.fill(128)),
+      getByteTimeDomainData: vi.fn((array: Uint8Array) => array.fill(160)),
       disconnect: vi.fn()
     } as unknown as AnalyserNode
     const sourceNode = {
@@ -742,5 +742,95 @@ describe('DiagnosticAutoTestView', () => {
     expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('active')
     expect(wrapper.text()).toContain('Fais monter le signal audio')
     expect(wrapper.text()).toContain('Relancer le micro')
+    expect(wrapper.text()).toContain('detecte')
+    expect(wrapper.find('[data-testid="microphone-waveform"]').exists()).toBe(true)
+  })
+
+  it('moves the microphone test to confirm only when the user clicks the manual action', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    const stream = {
+      getTracks: () => [{ stop: vi.fn() }]
+    } as unknown as MediaStream
+    const analyser = {
+      fftSize: 0,
+      getByteTimeDomainData: vi.fn((array: Uint8Array) => array.fill(160)),
+      disconnect: vi.fn()
+    } as unknown as AnalyserNode
+    const sourceNode = {
+      connect: vi.fn(),
+      disconnect: vi.fn()
+    } as unknown as MediaStreamAudioSourceNode
+
+    class FakeAudioContext {
+      state: AudioContextState = 'running'
+      createAnalyser() {
+        return analyser
+      }
+      createMediaStreamSource() {
+        return sourceNode
+      }
+      resume = vi.fn(async () => undefined)
+      close = vi.fn(async () => undefined)
+    }
+
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1))
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
+    vi.stubGlobal('navigator', {
+      mediaDevices: {
+        getUserMedia: vi.fn(async () => stream)
+      }
+    })
+    Object.defineProperty(window, 'AudioContext', {
+      configurable: true,
+      value: FakeAudioContext
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/microphone`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'microphone'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Autoriser')?.trigger('click')
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('active')
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Passer a la validation')?.trigger('click')
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('confirm')
+    expect(wrapper.text()).toContain('Verdict microphone final')
   })
 })

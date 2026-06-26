@@ -41,7 +41,7 @@ const buildMicrophoneStatus = (state: DiagnosticGuidedState): TestStatus => {
 export const useMicrophoneTest = (): DiagnosticTestDefinition => ({
   id: 'microphone',
   name: 'Microphone',
-  description: 'Ouvre le micro, affiche un niveau live et verifie qu un son est bien detecte.',
+  description: 'Ouvre le micro, affiche un signal live et laisse une validation manuelle apres verification.',
   icon: 'microphone',
   mode: 'guided',
   createGuidedState: () => ({

@@ -2,6 +2,10 @@ import { ref } from 'vue'
 
 export type MicrophonePermissionState = 'unknown' | 'granted' | 'denied' | 'not_supported'
 
+const WAVEFORM_SAMPLES = 48
+
+const createWaveformBaseline = () => Array.from({ length: WAVEFORM_SAMPLES }, () => 0.5)
+
 const isBrowser = () => typeof window !== 'undefined'
 
 type BrowserAudioContext = typeof AudioContext & {
@@ -26,12 +30,13 @@ export const useMicrophoneLevel = () => {
   const level = ref(0)
   const peakLevel = ref(0)
   const soundDetected = ref(false)
+  const waveform = ref<number[]>(createWaveformBaseline())
 
   let audioContext: AudioContext | null = null
   let analyser: AnalyserNode | null = null
   let animationFrameId: number | null = null
   let sourceNode: MediaStreamAudioSourceNode | null = null
-  let dataArray: Uint8Array<ArrayBuffer> | null = null
+  let dataArray: Uint8Array | null = null
 
   const stopStream = () => {
     if (animationFrameId !== null) {
@@ -53,7 +58,9 @@ export const useMicrophoneLevel = () => {
     dataArray = null
     activeStream.value = null
     level.value = 0
+    peakLevel.value = 0
     soundDetected.value = false
+    waveform.value = createWaveformBaseline()
   }
 
   const tickLevel = () => {
@@ -61,18 +68,28 @@ export const useMicrophoneLevel = () => {
       return
     }
 
-    analyser.getByteTimeDomainData(dataArray)
+    const nextDataArray = dataArray as Uint8Array<ArrayBuffer>
+
+    analyser.getByteTimeDomainData(nextDataArray)
 
     let sum = 0
-    for (const value of dataArray) {
+    for (const value of nextDataArray) {
       const normalized = (value - 128) / 128
       sum += normalized * normalized
     }
 
-    const rms = Math.sqrt(sum / dataArray.length)
+    const rms = Math.sqrt(sum / nextDataArray.length)
     const nextLevel = Math.min(1, rms * 4.5)
     level.value = nextLevel
     peakLevel.value = Math.max(peakLevel.value, nextLevel)
+    waveform.value = Array.from({ length: WAVEFORM_SAMPLES }, (_, index) => {
+      const sourceIndex = Math.min(
+        nextDataArray.length - 1,
+        Math.round((index / Math.max(1, WAVEFORM_SAMPLES - 1)) * (nextDataArray.length - 1))
+      )
+
+      return nextDataArray[sourceIndex] / 255
+    })
 
     if (nextLevel >= 0.12) {
       soundDetected.value = true
@@ -110,7 +127,7 @@ export const useMicrophoneLevel = () => {
       }
       analyser = audioContext.createAnalyser()
       analyser.fftSize = 1024
-      dataArray = new Uint8Array(new ArrayBuffer(analyser.fftSize))
+      dataArray = new Uint8Array(analyser.fftSize)
       sourceNode = audioContext.createMediaStreamSource(stream)
       sourceNode.connect(analyser)
 
@@ -133,6 +150,7 @@ export const useMicrophoneLevel = () => {
     soundDetected,
     startStream,
     stopStream,
-    supported
+    supported,
+    waveform
   }
 }
