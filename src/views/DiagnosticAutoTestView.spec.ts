@@ -121,7 +121,7 @@ describe('DiagnosticAutoTestView', () => {
     expect(exitFullscreen).toHaveBeenCalled()
   })
 
-  it('renders touch test in immersive mode with an exit cell indicator', async () => {
+  it('renders touch test in immersive mode without exit cell indicator', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -159,7 +159,49 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
-    expect(wrapper.text()).toContain("x2 quitte l'ecran tactile")
-    expect(wrapper.text()).toContain('x2 sortie')
+    expect(wrapper.text()).toContain('5 taps rapides')
+    expect(wrapper.text()).not.toContain('x2 sortie')
+  })
+
+  it('renders multitouch live panel', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+    store.startGuidedTest(session.id, 'multitouch')
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/multitouch`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'multitouch'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    expect(wrapper.text()).toContain('Multitouch live')
+    expect(wrapper.text()).toContain('Maximum')
   })
 })

@@ -3,6 +3,7 @@ import { useDeviceInfoTest } from '../composables/useDeviceInfoTest'
 import { usePermissionsTest } from '../composables/usePermissionsTest'
 import { useScreenTest } from '../composables/useScreenTest'
 import { useTouchTest } from '../composables/useTouchTest'
+import { useMultitouchTest } from '../composables/useMultitouchTest'
 import { useRotationTest } from '../composables/useRotationTest'
 import { useAccelerometerTest } from '../composables/useAccelerometerTest'
 import { useGyroscopeTest } from '../composables/useGyroscopeTest'
@@ -11,17 +12,20 @@ import { useGpsTest } from '../composables/useGpsTest'
 import { useCameraRearTest } from '../composables/useCameraRearTest'
 import { useCameraFrontTest } from '../composables/useCameraFrontTest'
 import { useAutofocusTest } from '../composables/useAutofocusTest'
+import { useMicrophoneTest } from '../composables/useMicrophoneTest'
 
 export const diagnosticTests: DiagnosticTestDefinition[] = [
   useDeviceInfoTest(),
   usePermissionsTest(),
   useScreenTest(),
   useTouchTest(),
+  useMultitouchTest(),
   useRotationTest(),
   useAccelerometerTest(),
   useGyroscopeTest(),
   useCompassTest(),
   useGpsTest(),
+  useMicrophoneTest(),
   useCameraRearTest(),
   useCameraFrontTest(),
   useAutofocusTest()

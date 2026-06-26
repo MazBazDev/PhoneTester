@@ -2,7 +2,7 @@
   <AppShell
     eyebrow="Preparation"
     title="Prepare ton iPhone pour le diagnostic"
-    description="Ce lot lance deux auto-tests, deux tests visuels, quatre tests capteurs, le GPS et trois tests camera."
+    description="Ce lot lance deux auto-tests, deux tests visuels, un tactile, un multitouch, quatre tests capteurs, le GPS, trois tests camera et un test micro."
   >
     <div class="space-y-4">
       <AppCard v-if="launchError" class="border border-rose-200 bg-rose-50/80">
@@ -14,7 +14,7 @@
         <ul class="space-y-3 text-sm leading-6 text-slate-700">
           <li>Utilise Safari sur iPhone pour un resultat representatif.</li>
           <li>Autorise la geolocalisation et garde le navigateur actif.</li>
-          <li>Prevois aussi quelques mouvements, rotations, l'acces a la localisation et l'autorisation camera.</li>
+          <li>Prevois aussi quelques mouvements, rotations, l'acces a la localisation, la camera et le microphone.</li>
         </ul>
       </AppCard>
 

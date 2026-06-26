@@ -6,17 +6,16 @@ import type {
   TestStatus
 } from '../domain/diagnostic'
 
-const GRID_ROWS = 8
-const GRID_COLS = 5
+const GRID_ROWS = 12
+const GRID_COLS = 7
 const TOTAL_CELLS = GRID_ROWS * GRID_COLS
 const COVERAGE_THRESHOLD = 90
 
 const buildTouchDetails = (state: DiagnosticGuidedState): DiagnosticTestDetail[] => {
   const visitedCells = Array.isArray(state.metrics.visitedCellIds) ? state.metrics.visitedCellIds : []
   const coveragePercent = typeof state.metrics.coveragePercent === 'number' ? state.metrics.coveragePercent : 0
-  const maxSimultaneousTouches =
-    typeof state.metrics.maxSimultaneousTouches === 'number' ? state.metrics.maxSimultaneousTouches : 0
-  const deadZonesReported = Boolean(state.metrics.deadZonesReported)
+  const unvisitedCount = Math.max(0, TOTAL_CELLS - visitedCells.length)
+  const completedAutomatically = Boolean(state.metrics.completedAutomatically)
 
   return [
     {
@@ -25,21 +24,20 @@ const buildTouchDetails = (state: DiagnosticGuidedState): DiagnosticTestDetail[]
       status: coveragePercent >= COVERAGE_THRESHOLD ? 'pass' : 'warning'
     },
     {
-      label: 'Multitouch max',
-      value: String(maxSimultaneousTouches),
-      status: maxSimultaneousTouches >= 2 ? 'pass' : 'warning'
+      label: 'Cellules manquantes',
+      value: String(unvisitedCount),
+      status: unvisitedCount === 0 ? 'pass' : 'warning'
     },
     {
-      label: 'Zones mortes signalees',
-      value: deadZonesReported ? 'oui' : 'non',
-      status: deadZonesReported ? 'warning' : 'pass'
+      label: 'Mode de fin',
+      value: completedAutomatically ? 'automatique' : 'geste 5 taps',
+      status: 'pass'
     }
   ]
 }
 
 const buildTouchStatus = (state: DiagnosticGuidedState): TestStatus => {
   const coveragePercent = typeof state.metrics.coveragePercent === 'number' ? state.metrics.coveragePercent : 0
-  const deadZonesReported = Boolean(state.metrics.deadZonesReported)
 
   if (coveragePercent === 0) {
     return 'failed'
@@ -49,7 +47,7 @@ const buildTouchStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'failed'
   }
 
-  if (deadZonesReported || coveragePercent < COVERAGE_THRESHOLD || state.userVerdict === 'warning') {
+  if (coveragePercent < COVERAGE_THRESHOLD || state.userVerdict === 'warning') {
     return 'warning'
   }
 
@@ -59,7 +57,7 @@ const buildTouchStatus = (state: DiagnosticGuidedState): TestStatus => {
 export const useTouchTest = (): DiagnosticTestDefinition => ({
   id: 'touch',
   name: 'Tactile',
-  description: 'Colorie une grille entiere et controle le multitouch avant validation finale.',
+  description: 'Cartographie toute la surface tactile avec une grille fine et une fin auto ou par geste 5 taps.',
   icon: 'grid',
   mode: 'guided',
   immersive: true,
@@ -71,7 +69,7 @@ export const useTouchTest = (): DiagnosticTestDefinition => ({
       {
         id: 'touch-grid',
         label: 'Grille tactile',
-        instruction: 'Balaye toute la surface de l’ecran et essaye avec plusieurs doigts.',
+        instruction: "Balaye toute la surface de l'ecran jusqu'a la couverture cible ou quitte par 5 taps rapides.",
         status: 'pending',
         response: null
       }
@@ -82,8 +80,8 @@ export const useTouchTest = (): DiagnosticTestDefinition => ({
       totalCells: TOTAL_CELLS,
       visitedCellIds: [],
       coveragePercent: 0,
-      maxSimultaneousTouches: 0,
-      deadZonesReported: null
+      completedAutomatically: false,
+      completedByGesture: false
     },
     userVerdict: null
   }),

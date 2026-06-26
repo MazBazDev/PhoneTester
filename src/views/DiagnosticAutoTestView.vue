@@ -75,7 +75,7 @@
             >
               <div>
                 <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Grille tactile</p>
-                <p class="mt-1 text-sm font-semibold">Balaye toute la surface. La case x2 quitte l'ecran tactile.</p>
+                <p class="mt-1 text-sm font-semibold">Balaye tout l'ecran. Fin auto a 90% ou 5 taps rapides pour sortir.</p>
               </div>
               <div class="rounded-2xl bg-white/80 px-3 py-2 text-right shadow-sm">
                 <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Couverture</p>
@@ -86,7 +86,7 @@
               <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Grille tactile</p>
               <h2 class="mt-3 text-2xl font-bold text-slate-950">Couvre toute la surface</h2>
               <p class="mt-3 text-sm leading-6 text-slate-600">
-                Balaye l'ecran entier puis essaye avec plusieurs doigts en meme temps.
+                Balaye toute la dalle. Le test se termine seul a 90% de couverture ou par 5 taps rapides.
               </p>
             </template>
             <div :class="immersiveActive ? 'mt-4 flex-1' : 'mt-5'">
@@ -95,10 +95,9 @@
                 :rows="touchRows"
                 :visited-cell-ids="touchVisitedCellIds"
                 :coverage-percent="touchCoveragePercent"
-                :max-simultaneous-touches="touchMaxSimultaneousTouches"
                 :immersive="immersiveActive"
-                :exit-cell-id="touchExitCellId"
                 @track="trackTouchGrid"
+                @tap="trackTouchTap"
               />
             </div>
             <div
@@ -110,11 +109,21 @@
                 <p class="mt-1 text-lg font-bold text-slate-950">{{ touchCoveragePercent }}%</p>
               </div>
               <div class="rounded-2xl bg-white/85 px-4 py-3 text-right shadow-sm">
-                <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Multitouch</p>
-                <p class="mt-1 text-lg font-bold text-slate-950">{{ touchMaxSimultaneousTouches }}</p>
+                <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Restant</p>
+                <p class="mt-1 text-lg font-bold text-slate-950">{{ touchMissingCellCount }}</p>
               </div>
             </div>
           </section>
+
+          <AppCard v-else-if="isMultitouchTest && guidedState.phase === 'active'" class="bg-slate-50/90">
+            <MultitouchPadPanel
+              title="Multitouch live"
+              hint="Pose 2 puis 3 doigts ensemble sur la zone pour verifier la detection simultanee."
+              :active-touches="multitouchActiveTouches"
+              :max-touches="multitouchMaxSimultaneousTouches"
+              @track="trackMultitouchPad"
+            />
+          </AppCard>
 
           <AppCard v-else-if="isSensorTest && guidedState.phase === 'active'" class="bg-slate-50/90">
             <SensorLivePanel
@@ -130,6 +139,16 @@
               :gps-status-label="gpsStatusLabel"
               :gps-main-value="gpsMainValue"
               :gps-secondary-label="gpsSecondaryLabel"
+            />
+          </AppCard>
+
+          <AppCard v-else-if="isMicrophoneTest && guidedState.phase === 'active'" class="bg-slate-50/90">
+            <MicrophoneLivePanel
+              hint="Parle ou tapote pres du micro. Le niveau et le pic doivent reagir rapidement."
+              :level="microphoneLevel"
+              :peak-level="microphonePeakLevel"
+              :sound-detected="microphoneSoundDetected"
+              :permission-state="String(guidedState.metrics.permissionState ?? microphoneRuntime.permissionState.value)"
             />
           </AppCard>
 
@@ -170,8 +189,21 @@
                 <p class="mt-2 text-xl font-bold text-slate-950">{{ touchCoveragePercent }}%</p>
               </div>
               <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Multitouch</p>
-                <p class="mt-2 text-xl font-bold text-slate-950">{{ touchMaxSimultaneousTouches }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mode de fin</p>
+                <p class="mt-2 text-xl font-bold text-slate-950">
+                  {{ guidedState.metrics.completedAutomatically ? 'automatique' : '5 taps' }}
+                </p>
+              </div>
+            </div>
+
+            <div v-else-if="isMultitouchTest" class="mt-5 grid grid-cols-2 gap-3">
+              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Actifs</p>
+                <p class="mt-2 text-xl font-bold text-slate-950">{{ multitouchActiveTouches }}</p>
+              </div>
+              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Maximum</p>
+                <p class="mt-2 text-xl font-bold text-slate-950">{{ multitouchMaxSimultaneousTouches }}</p>
               </div>
             </div>
 
@@ -181,6 +213,20 @@
             >
               <div
                 v-for="entry in sensorInfoEntries"
+                :key="entry.label"
+                class="flex items-center justify-between gap-3"
+              >
+                <span class="text-sm text-slate-600">{{ entry.label }}</span>
+                <span class="text-sm font-semibold text-slate-950">{{ entry.value }}</span>
+              </div>
+            </div>
+
+            <div
+              v-else-if="isMicrophoneTest"
+              class="mt-5 grid grid-cols-1 gap-3 rounded-[28px] border border-slate-200 bg-slate-50 p-4"
+            >
+              <div
+                v-for="entry in microphoneInfoEntries"
                 :key="entry.label"
                 class="flex items-center justify-between gap-3"
               >
@@ -259,9 +305,9 @@
         </AppButton>
 
         <AppButton
-          v-else-if="props.testId === 'touch' && guidedState?.phase === 'active'"
+          v-else-if="isMultitouchTest && guidedState?.phase === 'active'"
           class="flex-1"
-          @click="finishTouchCollection"
+          @click="finishMultitouchCollection"
         >
           Terminer la collecte
         </AppButton>
@@ -270,6 +316,14 @@
           v-else-if="isSensorTest && guidedState?.phase === 'active'"
           class="flex-1"
           @click="finishSensorCollection"
+        >
+          Terminer la collecte
+        </AppButton>
+
+        <AppButton
+          v-else-if="isMicrophoneTest && guidedState?.phase === 'active'"
+          class="flex-1"
+          @click="finishMicrophoneCollection"
         >
           Terminer la collecte
         </AppButton>
@@ -297,9 +351,12 @@ import AppButton from '../components/AppButton.vue'
 import AppCard from '../components/AppCard.vue'
 import AppShell from '../components/AppShell.vue'
 import CameraLivePanel from '../components/CameraLivePanel.vue'
+import MicrophoneLivePanel from '../components/MicrophoneLivePanel.vue'
+import MultitouchPadPanel from '../components/MultitouchPadPanel.vue'
 import SensorLivePanel from '../components/SensorLivePanel.vue'
 import TouchGridPanel from '../components/TouchGridPanel.vue'
 import { useCameraMedia, type CameraDeviceInfo } from '../composables/useCameraMedia'
+import { useMicrophoneLevel } from '../composables/useMicrophoneLevel'
 import {
   useMotionSensors,
   type MotionPermissionState,
@@ -324,10 +381,12 @@ const router = useRouter()
 const store = useDiagnosticStore()
 const sensorRuntime = useMotionSensors()
 const cameraRuntime = useCameraMedia()
+const microphoneRuntime = useMicrophoneLevel()
 const cameraPanelRef = ref<{ videoElement: HTMLVideoElement | null } | null>(null)
 const screenPanelRef = ref<HTMLElement | null>(null)
 const lastScreenProbeTapAt = ref(0)
-const lastTouchExitTapAt = ref(0)
+const lastTouchTapAt = ref(0)
+const touchTapCount = ref(0)
 const launchInFlight = ref(false)
 const autoStartedTestKey = ref<string | null>(null)
 
@@ -343,6 +402,8 @@ const isSensorTest = computed(() =>
 )
 const isCameraCaptureTest = computed(() => ['camera-rear', 'camera-front'].includes(props.testId))
 const isAutofocusTest = computed(() => props.testId === 'autofocus')
+const isMicrophoneTest = computed(() => props.testId === 'microphone')
+const isMultitouchTest = computed(() => props.testId === 'multitouch')
 const isMediaTest = computed(() => isCameraCaptureTest.value || isAutofocusTest.value)
 const sensorMode = computed<SensorMode | null>(() => {
   if (['rotation', 'accelerometer', 'gyroscope', 'compass', 'gps'].includes(props.testId)) {
@@ -375,7 +436,7 @@ const showRearDeviceSelector = computed(
 const currentCaptureUrl = computed(() => getSessionCapture(props.sessionId, props.testId))
 const currentAutofocusStepId = computed(() => currentGuidedSubStep.value?.id ?? null)
 const requiresSystemPermission = computed(() =>
-  ['rotation', 'accelerometer', 'gyroscope', 'compass', 'gps', 'camera-rear', 'camera-front', 'autofocus'].includes(
+  ['rotation', 'accelerometer', 'gyroscope', 'compass', 'gps', 'camera-rear', 'camera-front', 'autofocus', 'microphone'].includes(
     props.testId
   )
 )
@@ -405,15 +466,21 @@ const screenPanelStyle = computed(() => ({
   paddingBottom: immersiveActive.value ? '0' : undefined
 }))
 
-const touchRows = computed(() => Number(guidedState.value?.metrics.rows ?? 8))
-const touchCols = computed(() => Number(guidedState.value?.metrics.cols ?? 5))
-const touchExitCellId = computed(() => `${touchRows.value - 1}-${touchCols.value - 1}`)
+const touchRows = computed(() => Number(guidedState.value?.metrics.rows ?? 12))
+const touchCols = computed(() => Number(guidedState.value?.metrics.cols ?? 7))
 const touchVisitedCellIds = computed(() => {
   const value = guidedState.value?.metrics.visitedCellIds
   return Array.isArray(value) ? value : []
 })
 const touchCoveragePercent = computed(() => Number(guidedState.value?.metrics.coveragePercent ?? 0))
-const touchMaxSimultaneousTouches = computed(() => Number(guidedState.value?.metrics.maxSimultaneousTouches ?? 0))
+const touchMissingCellCount = computed(() =>
+  Math.max(0, touchRows.value * touchCols.value - touchVisitedCellIds.value.length)
+)
+const multitouchActiveTouches = computed(() => Number(guidedState.value?.metrics.activeTouches ?? 0))
+const multitouchMaxSimultaneousTouches = computed(() => Number(guidedState.value?.metrics.maxSimultaneousTouches ?? 0))
+const microphoneLevel = computed(() => Number(guidedState.value?.metrics.level ?? microphoneRuntime.level.value))
+const microphonePeakLevel = computed(() => Number(guidedState.value?.metrics.peakLevel ?? microphoneRuntime.peakLevel.value))
+const microphoneSoundDetected = computed(() => Boolean(guidedState.value?.metrics.soundDetected))
 
 const sensorPermissionState = computed<MotionPermissionState | string>(
   () => String(guidedState.value?.metrics.permissionState ?? sensorRuntime.permissionState.value)
@@ -640,6 +707,14 @@ const mediaInfoEntries = computed(() => {
   ]
 })
 
+const microphoneInfoEntries = computed(() => [
+  { label: 'Permission', value: String(guidedState.value?.metrics.permissionState ?? 'unknown') },
+  { label: 'Flux audio', value: Boolean(guidedState.value?.metrics.streamOpened) ? 'actif' : 'inactif' },
+  { label: 'Niveau actuel', value: `${Math.round(microphoneLevel.value * 100)}%` },
+  { label: 'Pic detecte', value: `${Math.round(microphonePeakLevel.value * 100)}%` },
+  { label: 'Son detecte', value: microphoneSoundDetected.value ? 'oui' : 'non' }
+])
+
 const helperText = computed(() => {
   if (step.value?.status === 'running' && testDefinition.value?.mode === 'automatic') {
     return 'Le navigateur collecte actuellement les informations disponibles.'
@@ -651,6 +726,14 @@ const helperText = computed(() => {
 
   if (isMediaTest.value) {
     return "Autorise la camera, observe le flux en direct puis valide le rendu avec une vraie manipulation."
+  }
+
+  if (isMicrophoneTest.value) {
+    return 'Autorise le micro puis verifie que le niveau audio reagit quand tu parles ou souffles.'
+  }
+
+  if (isMultitouchTest.value) {
+    return 'Pose plusieurs doigts ensemble pour mesurer le maximum detecte avant validation.'
   }
 
   if (testDefinition.value?.mode === 'guided') {
@@ -695,6 +778,10 @@ const confirmationTitle = computed(() => {
     return 'Verdict tactile final'
   }
 
+  if (isMultitouchTest.value) {
+    return 'Verdict multitouch final'
+  }
+
   if (props.testId === 'gps') {
     return 'Verdict GPS final'
   }
@@ -705,6 +792,10 @@ const confirmationTitle = computed(() => {
 
   if (isAutofocusTest.value) {
     return 'Verdict autofocus final'
+  }
+
+  if (isMicrophoneTest.value) {
+    return 'Verdict microphone final'
   }
 
   return 'Verdict capteur final'
@@ -719,6 +810,10 @@ const confirmationText = computed(() => {
     return 'Confirme si le tactile te semble fiable apres la couverture de la grille.'
   }
 
+  if (isMultitouchTest.value) {
+    return 'Confirme si plusieurs doigts ont bien ete detectes en meme temps sans coupure.'
+  }
+
   if (props.testId === 'gps') {
     return 'Confirme si la position et la precision GPS te paraissent coherentes.'
   }
@@ -731,11 +826,15 @@ const confirmationText = computed(() => {
     return 'Confirme si la mise au point a bien suivi les deux etapes proche puis loin.'
   }
 
+  if (isMicrophoneTest.value) {
+    return 'Confirme si le micro a bien reagi et si le niveau te semble coherent.'
+  }
+
   return 'Confirme si les mesures capteur te semblent coherentes apres la collecte.'
 })
 
 const launchButtonLabel = computed(() => {
-  if (isSensorTest.value || isMediaTest.value) {
+  if (isSensorTest.value || isMediaTest.value || isMicrophoneTest.value) {
     return 'Autoriser et commencer'
   }
 
@@ -844,23 +943,10 @@ const handleScreenProbeTouch = () => {
   lastScreenProbeTapAt.value = now
 }
 
-const handleTouchExitCell = (cellIds: string[]) => {
-  if (!cellIds.includes(touchExitCellId.value)) {
-    return
-  }
-
-  const now = Date.now()
-
-  if (now - lastTouchExitTapAt.value < 320) {
-    finishTouchCollection()
-  }
-
-  lastTouchExitTapAt.value = now
-}
-
 const stopActiveRuntimes = () => {
   sensorRuntime.stopListening()
   cameraRuntime.stopStream()
+  microphoneRuntime.stopStream()
   void exitScreenFullscreen()
 }
 
@@ -899,6 +985,34 @@ const launchCameraTest = async () => {
   })
 }
 
+const launchMicrophoneTest = async () => {
+  const permission = await microphoneRuntime.requestPermission()
+
+  store.updateGuidedMetrics(props.sessionId, props.testId, {
+    supported: microphoneRuntime.supported.value,
+    permissionState: permission,
+    streamOpened: false,
+    level: 0,
+    peakLevel: 0,
+    soundDetected: false
+  })
+
+  if (permission === 'denied' || permission === 'not_supported') {
+    return
+  }
+
+  const stream = await microphoneRuntime.startStream()
+
+  store.updateGuidedMetrics(props.sessionId, props.testId, {
+    supported: microphoneRuntime.supported.value,
+    permissionState: microphoneRuntime.permissionState.value,
+    streamOpened: Boolean(stream),
+    level: microphoneRuntime.level.value,
+    peakLevel: microphoneRuntime.peakLevel.value,
+    soundDetected: microphoneRuntime.soundDetected.value
+  })
+}
+
 const launchGuidedTest = async () => {
   if (launchInFlight.value) {
     return
@@ -910,6 +1024,11 @@ const launchGuidedTest = async () => {
   try {
     if (isMediaTest.value) {
       await launchCameraTest()
+      return
+    }
+
+    if (isMicrophoneTest.value) {
+      await launchMicrophoneTest()
       return
     }
 
@@ -1120,26 +1239,64 @@ const answerScreen = (response: 'yes' | 'no') => {
   store.recordGuidedStepResponse(props.sessionId, props.testId, response)
 }
 
-const trackTouchGrid = ({ cellIds, simultaneousTouches }: { cellIds: string[]; simultaneousTouches: number }) => {
-  handleTouchExitCell(cellIds)
+const finishTouchCollection = (mode: 'auto' | 'gesture') => {
+  store.updateGuidedMetrics(props.sessionId, props.testId, {
+    completedAutomatically: mode === 'auto',
+    completedByGesture: mode === 'gesture'
+  })
+  store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+}
 
+const trackTouchGrid = ({ cellIds }: { cellIds: string[]; simultaneousTouches: number }) => {
   const visitedCellIds = Array.from(new Set([...touchVisitedCellIds.value, ...cellIds]))
   const totalCells = touchRows.value * touchCols.value
   const coveragePercent = Math.round((visitedCellIds.length / totalCells) * 100)
 
   store.updateGuidedMetrics(props.sessionId, props.testId, {
     visitedCellIds,
-    coveragePercent,
-    maxSimultaneousTouches: Math.max(touchMaxSimultaneousTouches.value, simultaneousTouches)
+    coveragePercent
+  })
+
+  if (coveragePercent >= 90 && guidedState.value?.phase === 'active') {
+    finishTouchCollection('auto')
+  }
+}
+
+const trackTouchTap = () => {
+  const now = Date.now()
+  touchTapCount.value = now - lastTouchTapAt.value <= 350 ? touchTapCount.value + 1 : 1
+  lastTouchTapAt.value = now
+
+  if (touchTapCount.value >= 5 && guidedState.value?.phase === 'active') {
+    finishTouchCollection('gesture')
+    touchTapCount.value = 0
+  }
+}
+
+const trackMultitouchPad = ({ activeTouches, maxTouches }: { activeTouches: number; maxTouches: number }) => {
+  store.updateGuidedMetrics(props.sessionId, props.testId, {
+    activeTouches,
+    maxSimultaneousTouches: maxTouches
   })
 }
 
-const finishTouchCollection = () => {
+const finishMultitouchCollection = () => {
   store.moveGuidedTestToConfirm(props.sessionId, props.testId)
 }
 
 const finishSensorCollection = () => {
   sensorRuntime.stopListening()
+  store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+}
+
+const finishMicrophoneCollection = () => {
+  store.updateGuidedMetrics(props.sessionId, props.testId, {
+    streamOpened: Boolean(microphoneRuntime.activeStream.value),
+    level: microphoneRuntime.level.value,
+    peakLevel: microphoneRuntime.peakLevel.value,
+    soundDetected: microphoneRuntime.soundDetected.value
+  })
+  microphoneRuntime.stopStream()
   store.moveGuidedTestToConfirm(props.sessionId, props.testId)
 }
 
@@ -1159,12 +1316,6 @@ const handleMediaPrimaryAction = () => {
 
 const confirmGuided = (verdict: DiagnosticGuidedUserVerdict) => {
   stopActiveRuntimes()
-
-  if (props.testId === 'touch') {
-    store.updateGuidedMetrics(props.sessionId, props.testId, {
-      deadZonesReported: verdict !== 'pass'
-    })
-  }
 
   store.setGuidedUserVerdict(props.sessionId, props.testId, verdict)
   store.finalizeGuidedTest(props.sessionId, props.testId)
@@ -1225,11 +1376,32 @@ watch(
 )
 
 watch(
+  () => [props.sessionId, props.testId, microphoneRuntime.level.value, microphoneRuntime.peakLevel.value, microphoneRuntime.soundDetected.value] as const,
+  ([sessionId, testId, levelValue, peakValue, soundDetected]) => {
+    if (testId !== 'microphone' || guidedState.value?.phase !== 'active') {
+      return
+    }
+
+    store.updateGuidedMetrics(
+      sessionId,
+      testId,
+      {
+        level: levelValue,
+        peakLevel: peakValue,
+        soundDetected
+      },
+      { persist: false }
+    )
+  }
+)
+
+watch(
   () => `${props.sessionId}:${props.testId}`,
   () => {
     autoStartedTestKey.value = null
     lastScreenProbeTapAt.value = 0
-    lastTouchExitTapAt.value = 0
+    lastTouchTapAt.value = 0
+    touchTapCount.value = 0
   }
 )
 

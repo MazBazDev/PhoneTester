@@ -36,7 +36,7 @@ describe('HomeView', () => {
     })
 
     expect(wrapper.text()).toContain('Demarrer un diagnostic')
-    expect(wrapper.text()).toContain('12 tests deja jouables')
+    expect(wrapper.text()).toContain('14 tests deja jouables')
 
     await wrapper.get('button').trigger('click')
     await flushPromises()

@@ -16,7 +16,7 @@ describe('diagnostic store', () => {
     const session = store.startSession()
 
     expect(session.id).toBe('session-1')
-    expect(session.steps).toHaveLength(12)
+    expect(session.steps).toHaveLength(14)
     expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.steps).toHaveLength(6)
     expect(JSON.parse(localStorage.getItem('phone-tester.active-session') || '{}').id).toBe('session-1')
   })
@@ -35,6 +35,7 @@ describe('diagnostic store', () => {
           { testId: 'permissions', status: 'completed', result: { testId: 'permissions', status: 'pending', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'screen', status: 'completed', result: { testId: 'screen', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'touch', status: 'completed', result: { testId: 'touch', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
+          { testId: 'multitouch', status: 'completed', result: { testId: 'multitouch', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'rotation', status: 'completed', result: { testId: 'rotation', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'accelerometer', status: 'completed', result: { testId: 'accelerometer', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'gyroscope', status: 'completed', result: { testId: 'gyroscope', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
@@ -64,6 +65,7 @@ describe('diagnostic store', () => {
               userVerdict: null
             }
           },
+          { testId: 'microphone', status: 'pending', result: null, guidedState: { phase: 'idle', startedAt: null, currentStepIndex: 0, steps: [{ id: 'microphone-live', label: 'Micro live', instruction: 'step', status: 'pending', response: null }], metrics: { supported: true, permissionState: 'unknown', streamOpened: false, level: 0, peakLevel: 0, soundDetected: false }, userVerdict: null } },
           { testId: 'camera-rear', status: 'pending', result: null, guidedState: { phase: 'idle', startedAt: null, currentStepIndex: 0, steps: [{ id: 'rear-live', label: 'Flux arriere', instruction: 'step', status: 'pending', response: null }], metrics: { supported: true, permissionState: 'unknown', streamOpened: false, captureSucceeded: false, capturePreviewAvailable: false }, userVerdict: null } },
           { testId: 'camera-front', status: 'pending', result: null, guidedState: { phase: 'idle', startedAt: null, currentStepIndex: 0, steps: [{ id: 'front-live', label: 'Flux avant', instruction: 'step', status: 'pending', response: null }], metrics: { supported: true, permissionState: 'unknown', streamOpened: false, captureSucceeded: false, capturePreviewAvailable: false }, userVerdict: null } },
           { testId: 'autofocus', status: 'pending', result: null, guidedState: { phase: 'idle', startedAt: null, currentStepIndex: 0, steps: [{ id: 'autofocus-near', label: 'Pres', instruction: 'step', status: 'pending', response: null }, { id: 'autofocus-far', label: 'Loin', instruction: 'step', status: 'pending', response: null }], metrics: { supported: true, permissionState: 'unknown', streamOpened: false, nearValidated: false, farValidated: false }, userVerdict: null } }
@@ -86,7 +88,7 @@ describe('diagnostic store', () => {
     await store.runTest(session.id, 'device-info')
 
     expect(store.getStepByTestId(session.id, 'device-info')?.result?.testId).toBe('device-info')
-    expect(store.sessionProgress).toBe(8)
+    expect(store.sessionProgress).toBe(7)
   })
 
   it('finalizes compass and gps guided tests', () => {
@@ -162,6 +164,42 @@ describe('diagnostic store', () => {
 
     expect(store.getStepByTestId(session.id, 'camera-rear')?.result?.status).toBe('pass')
     expect(store.getStepByTestId(session.id, 'camera-front')?.result?.status).toBe('pass')
+  })
+
+  it('finalizes microphone guided test', () => {
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    store.startGuidedTest(session.id, 'microphone')
+    store.updateGuidedMetrics(session.id, 'microphone', {
+      supported: true,
+      permissionState: 'granted',
+      streamOpened: true,
+      level: 0.18,
+      peakLevel: 0.45,
+      soundDetected: true
+    })
+    store.moveGuidedTestToConfirm(session.id, 'microphone')
+    store.setGuidedUserVerdict(session.id, 'microphone', 'pass')
+    store.finalizeGuidedTest(session.id, 'microphone')
+
+    expect(store.getStepByTestId(session.id, 'microphone')?.result?.status).toBe('pass')
+  })
+
+  it('finalizes multitouch guided test', () => {
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    store.startGuidedTest(session.id, 'multitouch')
+    store.updateGuidedMetrics(session.id, 'multitouch', {
+      activeTouches: 0,
+      maxSimultaneousTouches: 3
+    })
+    store.moveGuidedTestToConfirm(session.id, 'multitouch')
+    store.setGuidedUserVerdict(session.id, 'multitouch', 'pass')
+    store.finalizeGuidedTest(session.id, 'multitouch')
+
+    expect(store.getStepByTestId(session.id, 'multitouch')?.result?.status).toBe('pass')
   })
 
   it('progresses and finalizes autofocus guided test', () => {

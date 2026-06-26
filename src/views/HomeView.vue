@@ -8,9 +8,9 @@
       <AppCard class="overflow-hidden">
         <div class="rounded-[24px] bg-slate-950 p-5 text-white">
           <p class="text-xs uppercase tracking-[0.2em] text-orange-300">Premier lot</p>
-          <h2 class="mt-2 text-2xl font-semibold">12 tests deja jouables</h2>
+          <h2 class="mt-2 text-2xl font-semibold">14 tests deja jouables</h2>
           <p class="mt-3 text-sm leading-6 text-slate-300">
-            Informations appareil, permissions, ecran, tactile, capteurs, boussole, GPS et camera, avec reprise locale.
+            Informations appareil, permissions, ecran, tactile, multitouch, capteurs, boussole, GPS, camera et micro, avec reprise locale.
           </p>
         </div>
         <div class="mt-4 space-y-3">
