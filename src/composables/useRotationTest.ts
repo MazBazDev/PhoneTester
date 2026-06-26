@@ -7,34 +7,27 @@ import type {
 } from '../domain/diagnostic'
 
 const buildRotationDetails = (state: DiagnosticGuidedState): DiagnosticTestDetail[] => {
-  const orientationsSeen = Array.isArray(state.metrics.orientationsSeen) ? state.metrics.orientationsSeen : []
-  const hasGyroscopeData = Boolean(state.metrics.hasGyroscopeData)
-  const permissionState = String(state.metrics.permissionState ?? 'unknown')
+  const observedOrientations = Array.isArray(state.metrics.observedOrientations) ? state.metrics.observedOrientations : []
+  const currentOrientation = String(state.metrics.currentOrientation ?? 'unknown')
 
   return [
-    { label: 'Permission mouvement', value: permissionState },
-    { label: 'Orientations vues', value: orientationsSeen.length > 0 ? orientationsSeen.join(', ') : 'aucune' },
-    { label: 'Capteur orientation actif', value: hasGyroscopeData ? 'oui' : 'non' }
+    { label: 'Orientation actuelle', value: currentOrientation },
+    { label: 'Positions observees', value: observedOrientations.length > 0 ? observedOrientations.join(', ') : 'aucune' }
   ]
 }
 
 const buildRotationStatus = (state: DiagnosticGuidedState): TestStatus => {
-  const supported = Boolean(state.metrics.supported)
-  const permissionState = String(state.metrics.permissionState ?? 'unknown')
-  const orientationsSeen = Array.isArray(state.metrics.orientationsSeen) ? state.metrics.orientationsSeen : []
-  const hasPortrait = orientationsSeen.includes('portrait')
-  const hasLandscape = orientationsSeen.includes('landscape')
+  const supported = state.metrics.supported !== false
+  const observedOrientations = Array.isArray(state.metrics.observedOrientations) ? state.metrics.observedOrientations : []
+  const hasPortrait = observedOrientations.includes('portrait')
+  const hasLandscape = observedOrientations.includes('landscape')
 
-  if (!supported || permissionState === 'not_supported') {
+  if (!supported) {
     return 'not_supported'
   }
 
   if (state.userVerdict === 'failed') {
     return 'failed'
-  }
-
-  if (permissionState === 'denied') {
-    return 'warning'
   }
 
   if (hasPortrait && hasLandscape && state.userVerdict === 'pass') {
@@ -47,7 +40,7 @@ const buildRotationStatus = (state: DiagnosticGuidedState): TestStatus => {
 export const useRotationTest = (): DiagnosticTestDefinition => ({
   id: 'rotation',
   name: 'Rotation',
-  description: 'Tourne le telephone pour detecter portrait, paysage et activite capteur.',
+  description: "Verifie que l'interface bascule bien entre portrait et paysage quand le telephone tourne.",
   icon: 'rotate',
   mode: 'guided',
   createGuidedState: () => ({
@@ -56,36 +49,31 @@ export const useRotationTest = (): DiagnosticTestDefinition => ({
     currentStepIndex: 0,
     steps: [
       {
-        id: 'rotation-live',
-        label: 'Rotation live',
-        instruction: 'Tourne le telephone entre portrait et paysage pour verifier la detection.',
+        id: 'rotation-ui',
+        label: "Rotation de l'interface",
+        instruction: "Tourne le telephone pour faire apparaitre au moins une vue portrait et une vue paysage.",
         status: 'pending',
         response: null
       }
     ],
     metrics: {
       supported: true,
-      permissionState: 'unknown',
-      orientationsSeen: [],
-      orientation: 'unknown',
-      alpha: 0,
-      beta: 0,
-      gamma: 0,
-      hasGyroscopeData: false
+      currentOrientation: 'unknown',
+      observedOrientations: []
     },
     userVerdict: null
   }),
   finalizeGuidedResult: (state: DiagnosticGuidedState): DiagnosticTestRunResult => {
     const status = buildRotationStatus(state)
-    const orientationsSeen = Array.isArray(state.metrics.orientationsSeen) ? state.metrics.orientationsSeen : []
+    const observedOrientations = Array.isArray(state.metrics.observedOrientations) ? state.metrics.observedOrientations : []
 
     return {
       testId: 'rotation',
       status,
       summary:
-        orientationsSeen.includes('portrait') && orientationsSeen.includes('landscape')
-          ? 'Les deux orientations principales ont ete observees pendant le test.'
-          : 'La rotation n’a pas montre toutes les orientations attendues ou reste incertaine.',
+        observedOrientations.includes('portrait') && observedOrientations.includes('landscape')
+          ? "L'interface a bien bascule entre portrait et paysage pendant le test."
+          : "La rotation de l'interface reste incomplete ou incertaine.",
       details: buildRotationDetails(state),
       startedAt: state.startedAt ?? new Date().toISOString(),
       finishedAt: new Date().toISOString()

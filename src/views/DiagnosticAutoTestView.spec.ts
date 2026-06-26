@@ -58,6 +58,50 @@ describe('DiagnosticAutoTestView', () => {
     expect(store.getStepByTestId(session.id, 'gps')?.guidedState?.phase).toBe('active')
   })
 
+  it('does not auto-start the rotation test on entry', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/rotation`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'rotation'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('idle')
+    expect(wrapper.text()).toContain('Commencer')
+    expect(wrapper.text()).not.toContain('Autoriser')
+  })
+
   it('renders the center screen probe and exits fullscreen on double tap', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -262,5 +306,73 @@ describe('DiagnosticAutoTestView', () => {
     expect(wrapper.text()).toContain('Multitouch')
     expect(wrapper.text()).toContain('0 actif')
     expect(wrapper.text()).toContain('Maximum')
+  })
+
+  it('moves rotation to confirm after portrait and landscape are observed', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 390
+    })
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 844
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/rotation`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'rotation'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Commencer')?.trigger('click')
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('active')
+    expect(wrapper.text()).toContain('Portrait')
+
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 844
+    })
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 390
+    })
+    window.dispatchEvent(new Event('resize'))
+    await nextTick()
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('confirm')
+    expect(wrapper.text()).toContain('Verdict rotation final')
   })
 })

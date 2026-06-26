@@ -135,6 +135,55 @@
             />
           </section>
 
+          <section v-else-if="isRotationTest && guidedState.phase === 'active'" class="space-y-4">
+            <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Rotation UI</p>
+              <h2 class="mt-2 text-2xl font-bold text-slate-950">Fais basculer l’interface</h2>
+              <p class="mt-2 text-sm leading-6 text-slate-600">
+                Tourne le telephone librement. Le test avance seul des qu’une vue portrait et une vue paysage ont ete observees.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr]">
+              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Positions attendues</p>
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                  <div class="rounded-[20px] border px-4 py-4" :class="rotationHasPortrait ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="rotationHasPortrait ? 'text-emerald-700' : 'text-slate-500'">Portrait</p>
+                    <p class="mt-2 text-sm font-medium" :class="rotationHasPortrait ? 'text-emerald-900' : 'text-slate-700'">
+                      {{ rotationHasPortrait ? 'Observe' : 'En attente' }}
+                    </p>
+                  </div>
+                  <div class="rounded-[20px] border px-4 py-4" :class="rotationHasLandscape ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="rotationHasLandscape ? 'text-emerald-700' : 'text-slate-500'">Paysage</p>
+                    <p class="mt-2 text-sm font-medium" :class="rotationHasLandscape ? 'text-emerald-900' : 'text-slate-700'">
+                      {{ rotationHasLandscape ? 'Observe' : 'En attente' }}
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-4 rounded-[20px] border border-stone-300/80 bg-stone-50/70 px-4 py-4">
+                  <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Orientation courante</p>
+                  <p class="mt-2 text-lg font-bold text-slate-950">{{ rotationCurrentOrientation }}</p>
+                </div>
+              </div>
+
+              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Repere visuel</p>
+                <div class="mt-5 flex justify-center">
+                  <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
+                    <div
+                      class="rounded-[22px] border border-stone-300 bg-white transition-all duration-300"
+                      :class="rotationCurrentOrientation === 'landscape' ? 'h-28 w-44' : 'h-44 w-28'"
+                    />
+                  </div>
+                </div>
+                <p class="mt-4 text-center text-sm text-slate-600">
+                  {{ rotationUiReady ? 'Les deux positions ont ete detectees.' : 'Le test attend encore une bascule visible.' }}
+                </p>
+              </div>
+            </div>
+          </section>
+
           <section v-else-if="isSensorTest && guidedState.phase === 'active'">
             <SensorLivePanel
               :title="sensorPanelTitle"
@@ -210,6 +259,17 @@
                 <p class="mt-2 text-xl font-bold text-slate-950">
                   {{ guidedState.metrics.completedAutomatically ? 'automatique' : '5 taps' }}
                 </p>
+              </div>
+            </div>
+
+            <div v-else-if="isRotationTest" class="mt-5 grid grid-cols-2 gap-3">
+              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Portrait</p>
+                <p class="mt-2 text-xl font-bold text-slate-950">{{ rotationHasPortrait ? 'observe' : 'non vu' }}</p>
+              </div>
+              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Paysage</p>
+                <p class="mt-2 text-xl font-bold text-slate-950">{{ rotationHasLandscape ? 'observe' : 'non vu' }}</p>
               </div>
             </div>
 
@@ -378,7 +438,6 @@ import {
   useMotionSensors,
   type MotionPermissionState,
   type SensorMode,
-  type RotationSample,
   type AccelerometerSample,
   type GyroscopeSample,
   type CompassSample,
@@ -406,6 +465,8 @@ const lastTouchTapAt = ref(0)
 const touchTapCount = ref(0)
 const launchInFlight = ref(false)
 const autoStartedTestKey = ref<string | null>(null)
+const rotationTrackingKey = ref<string | null>(null)
+const rotationUiCleanups: Array<() => void> = []
 const defaultThemeColor = '#0f172a'
 
 const session = computed(() => store.getSessionById(props.sessionId))
@@ -415,16 +476,15 @@ const nextStep = computed(() => store.getNextStep(props.sessionId, props.testId)
 const currentIndex = computed(() => session.value?.steps.findIndex((entry) => entry.testId === props.testId) ?? 0)
 const guidedState = computed(() => step.value?.guidedState ?? null)
 const currentGuidedSubStep = computed(() => store.getCurrentGuidedSubStep(props.sessionId, props.testId))
-const isSensorTest = computed(() =>
-  ['rotation', 'accelerometer', 'gyroscope', 'compass', 'gps'].includes(props.testId)
-)
+const isRotationTest = computed(() => props.testId === 'rotation')
+const isSensorTest = computed(() => ['accelerometer', 'gyroscope', 'compass', 'gps'].includes(props.testId))
 const isCameraCaptureTest = computed(() => ['camera-rear', 'camera-front'].includes(props.testId))
 const isAutofocusTest = computed(() => props.testId === 'autofocus')
 const isMicrophoneTest = computed(() => props.testId === 'microphone')
 const isMultitouchTest = computed(() => props.testId === 'multitouch')
 const isMediaTest = computed(() => isCameraCaptureTest.value || isAutofocusTest.value)
 const sensorMode = computed<SensorMode | null>(() => {
-  if (['rotation', 'accelerometer', 'gyroscope', 'compass', 'gps'].includes(props.testId)) {
+  if (['accelerometer', 'gyroscope', 'compass', 'gps'].includes(props.testId)) {
     return props.testId as SensorMode
   }
 
@@ -468,7 +528,7 @@ const isLastGuidedSubStep = computed(() => {
   return guidedState.value.currentStepIndex >= guidedState.value.steps.length - 1
 })
 const requiresSystemPermission = computed(() =>
-  ['rotation', 'accelerometer', 'gyroscope', 'compass', 'gps', 'camera-rear', 'camera-front', 'autofocus', 'microphone'].includes(
+  ['accelerometer', 'gyroscope', 'compass', 'gps', 'camera-rear', 'camera-front', 'autofocus', 'microphone'].includes(
     props.testId
   )
 )
@@ -504,6 +564,14 @@ const touchVisitedCellIds = computed(() => {
 const touchCoveragePercent = computed(() => Number(guidedState.value?.metrics.coveragePercent ?? 0))
 const multitouchActiveTouches = computed(() => Number(guidedState.value?.metrics.activeTouches ?? 0))
 const multitouchMaxSimultaneousTouches = computed(() => Number(guidedState.value?.metrics.maxSimultaneousTouches ?? 0))
+const rotationCurrentOrientation = computed(() => String(guidedState.value?.metrics.currentOrientation ?? 'unknown'))
+const rotationObservedOrientations = computed(() => {
+  const value = guidedState.value?.metrics.observedOrientations
+  return Array.isArray(value) ? value : []
+})
+const rotationHasPortrait = computed(() => rotationObservedOrientations.value.includes('portrait'))
+const rotationHasLandscape = computed(() => rotationObservedOrientations.value.includes('landscape'))
+const rotationUiReady = computed(() => rotationHasPortrait.value && rotationHasLandscape.value)
 const microphoneLevel = computed(() => Number(guidedState.value?.metrics.level ?? microphoneRuntime.level.value))
 const microphonePeakLevel = computed(() => Number(guidedState.value?.metrics.peakLevel ?? microphoneRuntime.peakLevel.value))
 const microphoneSoundDetected = computed(() => Boolean(guidedState.value?.metrics.soundDetected))
@@ -557,14 +625,6 @@ const sensorPanelVariant = computed<'sensor' | 'compass' | 'gps'>(() => {
 })
 
 const sensorAxisEntries = computed(() => {
-  if (props.testId === 'rotation') {
-    return [
-      { label: 'Alpha', value: Number(guidedState.value?.metrics.alpha ?? 0) },
-      { label: 'Beta', value: Number(guidedState.value?.metrics.beta ?? 0) },
-      { label: 'Gamma', value: Number(guidedState.value?.metrics.gamma ?? 0) }
-    ]
-  }
-
   if (props.testId === 'accelerometer') {
     return [
       { label: 'X', value: Number(guidedState.value?.metrics.x ?? 0) },
@@ -585,18 +645,6 @@ const sensorAxisEntries = computed(() => {
 })
 
 const sensorInfoEntries = computed(() => {
-  if (props.testId === 'rotation') {
-    const orientationsSeen = Array.isArray(guidedState.value?.metrics.orientationsSeen)
-      ? (guidedState.value?.metrics.orientationsSeen as string[])
-      : []
-    return [
-      { label: 'Permission', value: sensorPermissionState.value },
-      { label: 'Orientation actuelle', value: String(guidedState.value?.metrics.orientation ?? 'unknown') },
-      { label: 'Orientations vues', value: orientationsSeen.length > 0 ? orientationsSeen.join(', ') : 'aucune' },
-      { label: 'Activite capteur', value: Boolean(guidedState.value?.metrics.hasGyroscopeData) ? 'oui' : 'non' }
-    ]
-  }
-
   if (props.testId === 'accelerometer') {
     return [
       { label: 'Permission', value: sensorPermissionState.value },
@@ -654,10 +702,6 @@ const sensorPhoneRotation = computed(() => {
 })
 
 const sensorMaxValue = computed(() => {
-  if (props.testId === 'rotation') {
-    return 180
-  }
-
   if (props.testId === 'accelerometer') {
     return 12
   }
@@ -670,10 +714,6 @@ const sensorMaxValue = computed(() => {
 })
 
 const sensorPanelTitle = computed(() => {
-  if (props.testId === 'rotation') {
-    return 'Rotation et orientation'
-  }
-
   if (props.testId === 'accelerometer') {
     return 'Accelerometre live'
   }
@@ -690,10 +730,6 @@ const sensorPanelTitle = computed(() => {
 })
 
 const sensorPanelHint = computed(() => {
-  if (props.testId === 'rotation') {
-    return 'Tourne le telephone entre portrait et paysage pour confirmer les deux orientations.'
-  }
-
   if (props.testId === 'accelerometer') {
     return 'Incline doucement le telephone pour faire varier X, Y et Z.'
   }
@@ -762,6 +798,10 @@ const helperText = computed(() => {
     return 'Pose plusieurs doigts ensemble.'
   }
 
+  if (isRotationTest.value) {
+    return "Fais pivoter l'interface entre portrait et paysage."
+  }
+
   if (testDefinition.value?.mode === 'guided') {
     return 'Suis l’action affichee.'
   }
@@ -800,6 +840,10 @@ const confirmationTitle = computed(() => {
     return 'Verdict visuel final'
   }
 
+  if (isRotationTest.value) {
+    return 'Verdict rotation final'
+  }
+
   if (props.testId === 'touch') {
     return 'Verdict tactile final'
   }
@@ -830,6 +874,10 @@ const confirmationTitle = computed(() => {
 const confirmationText = computed(() => {
   if (props.testId === 'screen') {
     return "Confirme l'etat de l'ecran."
+  }
+
+  if (isRotationTest.value) {
+    return "Confirme que l'interface tourne correctement."
   }
 
   if (props.testId === 'touch') {
@@ -884,6 +932,94 @@ const mediaPrimaryActionLabel = computed(() => {
 })
 
 const motionStateToMetric = (state: MotionPermissionState) => state
+
+const getUiOrientationKind = () => {
+  if (typeof window === 'undefined') {
+    return 'unknown'
+  }
+
+  const type = window.screen.orientation?.type
+
+  if (type?.startsWith('portrait')) {
+    return 'portrait'
+  }
+
+  if (type?.startsWith('landscape')) {
+    return 'landscape'
+  }
+
+  return window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
+}
+
+const stopRotationUiTracking = () => {
+  while (rotationUiCleanups.length > 0) {
+    rotationUiCleanups.pop()?.()
+  }
+
+  rotationTrackingKey.value = null
+}
+
+const trackRotationUiSample = () => {
+  if (!isRotationTest.value || guidedState.value?.phase !== 'active') {
+    return
+  }
+
+  const currentOrientation = getUiOrientationKind()
+  const observedOrientations = Array.from(
+    new Set([...rotationObservedOrientations.value, currentOrientation].filter((value) => value !== 'unknown'))
+  )
+
+  store.updateGuidedMetrics(
+    props.sessionId,
+    props.testId,
+    {
+      supported: currentOrientation !== 'unknown',
+      currentOrientation,
+      observedOrientations,
+      lastOrientationChangeAt: new Date().toISOString()
+    },
+    { persist: false }
+  )
+
+  if (
+    observedOrientations.includes('portrait') &&
+    observedOrientations.includes('landscape') &&
+    guidedState.value?.phase === 'active'
+  ) {
+    stopRotationUiTracking()
+    store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+  }
+}
+
+const startRotationUiTracking = () => {
+  if (!isRotationTest.value || guidedState.value?.phase !== 'active') {
+    return
+  }
+
+  const key = `${props.sessionId}:${props.testId}:${guidedState.value.phase}`
+
+  if (rotationTrackingKey.value === key) {
+    return
+  }
+
+  stopRotationUiTracking()
+  rotationTrackingKey.value = key
+  trackRotationUiSample()
+
+  const handleOrientationChange = () => {
+    trackRotationUiSample()
+  }
+
+  window.addEventListener('orientationchange', handleOrientationChange)
+  rotationUiCleanups.push(() => window.removeEventListener('orientationchange', handleOrientationChange))
+  window.addEventListener('resize', handleOrientationChange)
+  rotationUiCleanups.push(() => window.removeEventListener('resize', handleOrientationChange))
+
+  if (window.screen.orientation) {
+    window.screen.orientation.addEventListener('change', handleOrientationChange)
+    rotationUiCleanups.push(() => window.screen.orientation.removeEventListener('change', handleOrientationChange))
+  }
+}
 
 const updateFromSensorError = (error: SensorError) => {
   if (!sensorMode.value) {
@@ -973,6 +1109,7 @@ const handleScreenProbeTouch = () => {
 }
 
 const stopActiveRuntimes = () => {
+  stopRotationUiTracking()
   sensorRuntime.stopListening()
   cameraRuntime.stopStream()
   microphoneRuntime.stopStream()
@@ -1051,6 +1188,21 @@ const launchGuidedTest = async () => {
   store.startGuidedTest(props.sessionId, props.testId)
 
   try {
+    if (isRotationTest.value) {
+      store.updateGuidedMetrics(
+        props.sessionId,
+        props.testId,
+        {
+          supported: true,
+          currentOrientation: getUiOrientationKind(),
+          observedOrientations: []
+        },
+        { persist: true }
+      )
+      startRotationUiTracking()
+      return
+    }
+
     if (isMediaTest.value) {
       await launchCameraTest()
       return
@@ -1085,31 +1237,6 @@ const launchGuidedTest = async () => {
     sensorRuntime.startListening(
       sensorMode.value,
       (sample) => {
-      if (sensorMode.value === 'rotation') {
-        const rotation = sample as RotationSample
-        const previousOrientations = Array.isArray(guidedState.value?.metrics.orientationsSeen)
-          ? (guidedState.value?.metrics.orientationsSeen as string[])
-          : []
-        const orientationsSeen = Array.from(new Set([...previousOrientations, rotation.orientation]))
-
-        store.updateGuidedMetrics(
-          props.sessionId,
-          props.testId,
-          {
-            supported: true,
-            permissionState: sensorRuntime.permissionState.value,
-            orientationsSeen,
-            orientation: rotation.orientation,
-            alpha: rotation.alpha,
-            beta: rotation.beta,
-            gamma: rotation.gamma,
-            hasGyroscopeData: rotation.hasGyroscopeData
-          },
-          { persist: false }
-        )
-        return
-      }
-
       if (sensorMode.value === 'accelerometer') {
         const accelerometer = sample as AccelerometerSample
         const maxAbsX = Math.max(Math.abs(accelerometer.x), Number(guidedState.value?.metrics.maxAbsX ?? 0))
@@ -1425,6 +1552,19 @@ watch(
 )
 
 watch(
+  () => [props.sessionId, props.testId, guidedState.value?.phase] as const,
+  ([, testId, phase]) => {
+    if (testId === 'rotation' && phase === 'active') {
+      startRotationUiTracking()
+      return
+    }
+
+    stopRotationUiTracking()
+  },
+  { immediate: true }
+)
+
+watch(
   () => [props.sessionId, props.testId, microphoneRuntime.level.value, microphoneRuntime.peakLevel.value, microphoneRuntime.soundDetected.value] as const,
   ([sessionId, testId, levelValue, peakValue, soundDetected]) => {
     if (testId !== 'microphone' || guidedState.value?.phase !== 'active') {
@@ -1447,6 +1587,7 @@ watch(
 watch(
   () => `${props.sessionId}:${props.testId}`,
   () => {
+    stopRotationUiTracking()
     autoStartedTestKey.value = null
     lastScreenProbeTapAt.value = 0
     lastTouchTapAt.value = 0
