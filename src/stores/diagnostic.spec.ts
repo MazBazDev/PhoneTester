@@ -5,56 +5,60 @@ import { useDiagnosticStore } from './diagnostic'
 describe('diagnostic store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    localStorage.clear()
     vi.stubGlobal('crypto', {
       randomUUID: () => 'session-1'
     })
   })
 
-  it('creates a new session with profile data', () => {
+  it('creates and persists a new session', () => {
     const store = useDiagnosticStore()
-    const session = store.startSession({
-      brand: 'Apple',
-      model: 'iPhone 14',
-      storage: '128 Go'
-    })
+    const session = store.startSession()
 
     expect(session.id).toBe('session-1')
-    expect(session.phoneProfile.brand).toBe('Apple')
-    expect(session.sections).toHaveLength(5)
-    expect(store.activeSessionId).toBe('session-1')
+    expect(session.steps).toHaveLength(2)
+    expect(JSON.parse(localStorage.getItem('phone-tester.active-session') || '{}').id).toBe('session-1')
   })
 
-  it('stores answers and computes progress', () => {
+  it('hydrates a stored session', () => {
+    localStorage.setItem(
+      'phone-tester.active-session',
+      JSON.stringify({
+        id: 'stored-session',
+        status: 'draft',
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        deviceTarget: 'iphone-safari',
+        steps: [
+          { testId: 'device-info', status: 'completed', result: { testId: 'device-info', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' } },
+          { testId: 'permissions', status: 'pending', result: null }
+        ]
+      })
+    )
+
+    const store = useDiagnosticStore()
+    store.ensureHydrated()
+
+    expect(store.activeSession?.id).toBe('stored-session')
+    expect(store.getFirstIncompleteStep('stored-session')?.testId).toBe('permissions')
+  })
+
+  it('runs a test and computes progress', async () => {
     const store = useDiagnosticStore()
     const session = store.startSession()
 
-    store.answerCheck(session.id, 'identity', 'serial-match', 'ok')
-    store.answerCheck(session.id, 'identity', 'icloud-lock', 'warning')
+    await store.runTest(session.id, 'device-info')
 
-    expect(store.getSessionById(session.id)?.sections[0].completed).toBe(true)
-    expect(store.getProgress(session.id)).toBe(20)
+    expect(store.getStepByTestId(session.id, 'device-info')?.result?.testId).toBe('device-info')
+    expect(store.sessionProgress).toBe(50)
   })
 
-  it('returns next section and completes status when all checks are answered', () => {
-    const store = useDiagnosticStore()
-    const session = store.startSession()
-
-    for (const section of session.sections) {
-      for (const check of section.checks) {
-        store.answerCheck(session.id, section.id, check.id, 'ok')
-      }
-    }
-
-    expect(store.goToNextSection(session.id, 'identity')?.id).toBe('physical')
-    expect(store.getSessionById(session.id)?.status).toBe('completed')
-  })
-
-  it('resets all in-memory sessions', () => {
+  it('resets the persisted session', () => {
     const store = useDiagnosticStore()
     store.startSession()
     store.resetSession()
 
-    expect(store.sessions).toEqual([])
-    expect(store.activeSessionId).toBeNull()
+    expect(store.activeSession).toBeNull()
+    expect(localStorage.getItem('phone-tester.active-session')).toBeNull()
   })
 })

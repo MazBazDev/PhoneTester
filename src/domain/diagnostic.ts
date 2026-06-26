@@ -1,38 +1,44 @@
-export type DiagnosticStatus = 'draft' | 'completed'
+export type TestStatus = 'pass' | 'warning' | 'failed' | 'skipped' | 'not_supported' | 'pending'
 
-export interface PhoneProfile {
-  brand: string
-  model: string
-  storage: string
-}
+export type DiagnosticSessionStatus = 'draft' | 'completed'
 
-export interface DiagnosticCheck {
-  id: string
+export type DiagnosticStepState = 'pending' | 'running' | 'completed'
+
+export interface DiagnosticTestDetail {
   label: string
-  helper: string
-}
-
-export interface DiagnosticSection {
-  id: string
-  title: string
-  description: string
-  checks: DiagnosticCheck[]
-}
-
-export interface DiagnosticAnswer {
-  checkId: string
   value: string
+  status?: TestStatus
 }
 
-export interface DiagnosticSectionState extends DiagnosticSection {
-  answers: DiagnosticAnswer[]
-  completed: boolean
+export interface DiagnosticTestRunResult {
+  testId: string
+  status: TestStatus
+  summary: string
+  details: DiagnosticTestDetail[]
+  startedAt: string
+  finishedAt: string
+}
+
+export interface DiagnosticTestDefinition {
+  id: string
+  name: string
+  description: string
+  icon: string
+  automatic: boolean
+  run: () => Promise<DiagnosticTestRunResult>
+}
+
+export interface DiagnosticSessionStep {
+  testId: string
+  status: DiagnosticStepState
+  result: DiagnosticTestRunResult | null
 }
 
 export interface DiagnosticSession {
   id: string
-  status: DiagnosticStatus
+  status: DiagnosticSessionStatus
   createdAt: string
-  phoneProfile: PhoneProfile
-  sections: DiagnosticSectionState[]
+  updatedAt: string
+  deviceTarget: 'iphone-safari'
+  steps: DiagnosticSessionStep[]
 }

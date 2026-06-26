@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import NewDiagnosticView from '../views/NewDiagnosticView.vue'
-import DiagnosticSectionView from '../views/DiagnosticSectionView.vue'
+import DiagnosticIntroView from '../views/DiagnosticIntroView.vue'
+import DiagnosticAutoTestView from '../views/DiagnosticAutoTestView.vue'
 import DiagnosticSummaryView from '../views/DiagnosticSummaryView.vue'
 import { useDiagnosticStore } from '../stores/diagnostic'
 
@@ -14,14 +14,14 @@ export const router = createRouter({
       component: HomeView
     },
     {
-      path: '/diagnostic/new',
-      name: 'diagnostic-new',
-      component: NewDiagnosticView
+      path: '/intro',
+      name: 'diagnostic-intro',
+      component: DiagnosticIntroView
     },
     {
-      path: '/diagnostic/:sessionId/section/:sectionId',
-      name: 'diagnostic-section',
-      component: DiagnosticSectionView,
+      path: '/diagnostic/:sessionId/auto/:testId',
+      name: 'diagnostic-auto-test',
+      component: DiagnosticAutoTestView,
       props: true
     },
     {
@@ -34,11 +34,13 @@ export const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  if (!to.params.sessionId) {
+  const store = useDiagnosticStore()
+  store.ensureHydrated()
+
+  if (to.name === 'home' || to.name === 'diagnostic-intro') {
     return true
   }
 
-  const store = useDiagnosticStore()
   const sessionId = String(to.params.sessionId)
   const session = store.getSessionById(sessionId)
 
@@ -50,15 +52,17 @@ router.beforeEach((to) => {
     return true
   }
 
-  const targetSectionId = String(to.params.sectionId)
-  const targetSection = session.sections.find((section) => section.id === targetSectionId)
+  const testId = String(to.params.testId)
+  const definition = store.getTestDefinition(testId)
 
-  if (!targetSection) {
+  if (!definition) {
+    const firstIncomplete = store.getFirstIncompleteStep(sessionId)
+
     return {
-      name: 'diagnostic-section',
+      name: 'diagnostic-auto-test',
       params: {
         sessionId,
-        sectionId: session.sections[0]?.id
+        testId: firstIncomplete?.testId ?? session.steps[0]?.testId
       }
     }
   }

@@ -1,126 +1,216 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { diagnosticCatalog } from '../data/diagnosticCatalog'
+import { diagnosticTests, diagnosticTestMap } from '../data/diagnosticTests'
 import type {
-  DiagnosticAnswer,
   DiagnosticSession,
-  DiagnosticSectionState,
-  PhoneProfile
+  DiagnosticSessionStep,
+  DiagnosticTestDefinition,
+  DiagnosticTestRunResult
 } from '../domain/diagnostic'
 
-const defaultPhoneProfile = (): PhoneProfile => ({
-  brand: '',
-  model: '',
-  storage: ''
-})
+const STORAGE_KEY = 'phone-tester.active-session'
 
-const buildSections = (): DiagnosticSectionState[] =>
-  diagnosticCatalog.map((section) => ({
-    ...section,
-    answers: [],
-    completed: false
+const buildSteps = (): DiagnosticSessionStep[] =>
+  diagnosticTests.map((test) => ({
+    testId: test.id,
+    status: 'pending',
+    result: null
   }))
 
-const isSectionCompleted = (section: DiagnosticSectionState) => section.answers.length === section.checks.length
+const buildSession = (): DiagnosticSession => ({
+  id: crypto.randomUUID(),
+  status: 'draft',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  deviceTarget: 'iphone-safari',
+  steps: buildSteps()
+})
+
+const isBrowser = () => typeof window !== 'undefined'
 
 export const useDiagnosticStore = defineStore('diagnostic', () => {
-  const sessions = ref<DiagnosticSession[]>([])
-  const activeSessionId = ref<string | null>(null)
+  const activeSession = ref<DiagnosticSession | null>(null)
+  const hydrated = ref(false)
 
-  const activeSession = computed(() =>
-    sessions.value.find((session) => session.id === activeSessionId.value) ?? null
-  )
-
-  const startSession = (phoneProfile?: Partial<PhoneProfile>) => {
-    const session: DiagnosticSession = {
-      id: crypto.randomUUID(),
-      status: 'draft',
-      createdAt: new Date().toISOString(),
-      phoneProfile: {
-        ...defaultPhoneProfile(),
-        ...phoneProfile
-      },
-      sections: buildSections()
-    }
-
-    sessions.value.push(session)
-    activeSessionId.value = session.id
-
-    return session
-  }
-
-  const getSessionById = (sessionId: string) =>
-    sessions.value.find((session) => session.id === sessionId) ?? null
-
-  const answerCheck = (sessionId: string, sectionId: string, checkId: string, value: string) => {
-    const session = getSessionById(sessionId)
-
-    if (!session) {
+  const persist = () => {
+    if (!isBrowser()) {
       return
     }
 
-    const section = session.sections.find((entry) => entry.id === sectionId)
-
-    if (!section) {
+    if (!activeSession.value) {
+      window.localStorage.removeItem(STORAGE_KEY)
       return
     }
 
-    const existingAnswer = section.answers.find((answer) => answer.checkId === checkId)
-    const nextAnswer: DiagnosticAnswer = { checkId, value }
-
-    if (existingAnswer) {
-      existingAnswer.value = value
-    } else {
-      section.answers.push(nextAnswer)
-    }
-
-    section.completed = isSectionCompleted(section)
-    session.status = session.sections.every((entry) => entry.completed) ? 'completed' : 'draft'
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(activeSession.value))
   }
 
-  const goToNextSection = (sessionId: string, sectionId: string) => {
-    const session = getSessionById(sessionId)
-
-    if (!session) {
-      return null
+  const hydrateFromStorage = () => {
+    if (hydrated.value || !isBrowser()) {
+      hydrated.value = true
+      return
     }
 
-    const index = session.sections.findIndex((section) => section.id === sectionId)
+    const rawSession = window.localStorage.getItem(STORAGE_KEY)
 
-    if (index === -1) {
-      return null
+    if (rawSession) {
+      activeSession.value = JSON.parse(rawSession) as DiagnosticSession
     }
 
-    return session.sections[index + 1] ?? null
+    hydrated.value = true
   }
 
-  const getProgress = (sessionId: string) => {
-    const session = getSessionById(sessionId)
+  watch(activeSession, persist, { deep: true })
 
-    if (!session) {
+  const ensureHydrated = () => {
+    hydrateFromStorage()
+  }
+
+  const testDefinitions = computed<DiagnosticTestDefinition[]>(() => diagnosticTests)
+
+  const sessionProgress = computed(() => {
+    if (!activeSession.value) {
       return 0
     }
 
-    const completedChecks = session.sections.reduce((total, section) => total + section.answers.length, 0)
-    const totalChecks = session.sections.reduce((total, section) => total + section.checks.length, 0)
+    const completedSteps = activeSession.value.steps.filter((step) => step.result !== null).length
+    return Math.round((completedSteps / activeSession.value.steps.length) * 100)
+  })
 
-    return totalChecks === 0 ? 0 : Math.round((completedChecks / totalChecks) * 100)
+  const currentScore = computed(() => {
+    if (!activeSession.value) {
+      return 0
+    }
+
+    const scoredSteps = activeSession.value.steps.filter((step) => step.result)
+
+    if (scoredSteps.length === 0) {
+      return 0
+    }
+
+    const points = scoredSteps.reduce((total, step) => {
+      const status = step.result?.status
+
+      if (status === 'pass') {
+        return total + 1
+      }
+
+      if (status === 'warning' || status === 'pending') {
+        return total + 0.5
+      }
+
+      return total
+    }, 0)
+
+    return Math.round((points / scoredSteps.length) * 100)
+  })
+
+  const startSession = () => {
+    const session = buildSession()
+    activeSession.value = session
+    persist()
+    return session
+  }
+
+  const getSessionById = (sessionId: string) => {
+    if (activeSession.value?.id === sessionId) {
+      return activeSession.value
+    }
+
+    return null
+  }
+
+  const resumeSession = () => {
+    ensureHydrated()
+    return activeSession.value
+  }
+
+  const getTestDefinition = (testId: string) => diagnosticTestMap[testId] ?? null
+
+  const getStepByTestId = (sessionId: string, testId: string) => {
+    const session = getSessionById(sessionId)
+    return session?.steps.find((step) => step.testId === testId) ?? null
+  }
+
+  const getNextStep = (sessionId: string, testId: string) => {
+    const session = getSessionById(sessionId)
+
+    if (!session) {
+      return null
+    }
+
+    const currentIndex = session.steps.findIndex((step) => step.testId === testId)
+
+    if (currentIndex === -1) {
+      return session.steps[0] ?? null
+    }
+
+    return session.steps[currentIndex + 1] ?? null
+  }
+
+  const getFirstIncompleteStep = (sessionId: string) => {
+    const session = getSessionById(sessionId)
+    return session?.steps.find((step) => step.result === null) ?? null
+  }
+
+  const markResult = (session: DiagnosticSession, stepId: string, result: DiagnosticTestRunResult) => {
+    const step = session.steps.find((entry) => entry.testId === stepId)
+
+    if (!step) {
+      return
+    }
+
+    step.status = 'completed'
+    step.result = result
+    session.updatedAt = new Date().toISOString()
+    session.status = session.steps.every((entry) => entry.result !== null) ? 'completed' : 'draft'
+  }
+
+  const runTest = async (sessionId: string, testId: string) => {
+    const session = getSessionById(sessionId)
+    const definition = getTestDefinition(testId)
+
+    if (!session || !definition) {
+      return null
+    }
+
+    const step = session.steps.find((entry) => entry.testId === testId)
+
+    if (!step) {
+      return null
+    }
+
+    step.status = 'running'
+    session.updatedAt = new Date().toISOString()
+
+    const result = await definition.run()
+    markResult(session, testId, result)
+    persist()
+
+    return result
   }
 
   const resetSession = () => {
-    activeSessionId.value = null
-    sessions.value = []
+    activeSession.value = null
+    if (isBrowser()) {
+      window.localStorage.removeItem(STORAGE_KEY)
+    }
   }
 
   return {
     activeSession,
-    activeSessionId,
-    sessions,
-    startSession,
+    currentScore,
+    ensureHydrated,
+    getFirstIncompleteStep,
+    getNextStep,
     getSessionById,
-    answerCheck,
-    goToNextSection,
-    getProgress,
-    resetSession
+    getStepByTestId,
+    getTestDefinition,
+    resumeSession,
+    runTest,
+    sessionProgress,
+    startSession,
+    resetSession,
+    testDefinitions
   }
 })
