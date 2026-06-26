@@ -11,21 +11,22 @@
       :immersive="immersiveActive"
     >
       <div class="space-y-4" :class="immersiveActive ? 'flex min-h-[70vh] flex-col justify-between' : ''">
-        <AppCard v-if="!immersiveActive">
+        <div
+          v-if="!immersiveActive"
+          class="rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3"
+        >
           <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <div class="min-w-0">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                 Test {{ currentIndex + 1 }} / {{ session.steps.length }}
               </p>
-              <p class="mt-2 text-sm leading-6 text-slate-700">
-                {{ helperText }}
-              </p>
+              <p class="mt-1 truncate text-sm text-slate-700">{{ helperText }}</p>
             </div>
-            <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]" :class="badgeClass">
+            <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="badgeClass">
               {{ badgeLabel }}
             </span>
           </div>
-        </AppCard>
+        </div>
 
         <template v-if="testDefinition.mode === 'guided' && guidedState">
           <section
@@ -178,10 +179,10 @@
             </div>
           </AppCard>
 
-          <AppCard v-else-if="guidedState.phase === 'confirm' || step.result">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Validation finale</p>
-            <h2 class="mt-3 text-2xl font-bold text-slate-950">{{ confirmationTitle }}</h2>
-            <p class="mt-3 text-sm leading-6 text-slate-600">{{ confirmationText }}</p>
+            <AppCard v-else-if="guidedState.phase === 'confirm' || step.result">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Validation</p>
+            <h2 class="mt-2 text-2xl font-bold text-slate-950">{{ confirmationTitle }}</h2>
+            <p class="mt-2 text-sm text-slate-600">{{ confirmationText }}</p>
 
             <div v-if="props.testId === 'touch'" class="mt-5 grid grid-cols-2 gap-3">
               <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -253,8 +254,8 @@
             </div>
 
             <div v-if="!step.result" class="mt-5 grid grid-cols-1 gap-3">
-              <AppButton class="w-full" variant="secondary" @click="confirmGuided('pass')">Tout est conforme</AppButton>
-              <AppButton class="w-full" @click="confirmGuided('warning')">Je garde un doute ou un defaut</AppButton>
+              <AppButton class="w-full" variant="secondary" @click="confirmGuided('pass')">Conforme</AppButton>
+              <AppButton class="w-full" @click="confirmGuided('warning')">Doute</AppButton>
             </div>
 
             <div v-else class="mt-5 space-y-3">
@@ -286,7 +287,7 @@
       </div>
 
       <template #actions>
-        <AppButton class="flex-1" variant="secondary" @click="quitDiagnostic">Quitter</AppButton>
+        <AppButton class="flex-1" variant="ghost" @click="quitDiagnostic">Quitter</AppButton>
 
         <AppButton
           v-if="testDefinition.mode === 'automatic' && !step.result"
@@ -337,7 +338,7 @@
         </AppButton>
 
         <AppButton v-else-if="step.result" class="flex-1" @click="goNext">
-          {{ nextStep ? 'Test suivant' : 'Voir le resume' }}
+          {{ nextStep ? 'Suivant' : 'Resume' }}
         </AppButton>
       </template>
     </AppShell>
@@ -717,30 +718,30 @@ const microphoneInfoEntries = computed(() => [
 
 const helperText = computed(() => {
   if (step.value?.status === 'running' && testDefinition.value?.mode === 'automatic') {
-    return 'Le navigateur collecte actuellement les informations disponibles.'
+    return 'Collecte en cours.'
   }
 
   if (step.value?.result) {
-    return 'Le test est termine. Verifie les details avant de passer au suivant.'
+    return 'Test termine.'
   }
 
   if (isMediaTest.value) {
-    return "Autorise la camera, observe le flux en direct puis valide le rendu avec une vraie manipulation."
+    return 'Autorise la camera puis valide le rendu.'
   }
 
   if (isMicrophoneTest.value) {
-    return 'Autorise le micro puis verifie que le niveau audio reagit quand tu parles ou souffles.'
+    return 'Autorise le micro puis parle.'
   }
 
   if (isMultitouchTest.value) {
-    return 'Pose plusieurs doigts ensemble pour mesurer le maximum detecte avant validation.'
+    return 'Pose plusieurs doigts ensemble.'
   }
 
   if (testDefinition.value?.mode === 'guided') {
-    return 'Ce test te guide pas a pas et enregistre aussi des mesures utiles.'
+    return 'Suis l’action affichee.'
   }
 
-  return 'Appuie sur le bouton pour lancer ce controle automatique.'
+  return 'Lance le controle.'
 })
 
 const badgeLabel = computed(() => {
@@ -803,39 +804,39 @@ const confirmationTitle = computed(() => {
 
 const confirmationText = computed(() => {
   if (props.testId === 'screen') {
-    return "Confirme si l'ecran te parait globalement conforme apres les 6 couleurs."
+    return "Confirme l'etat de l'ecran."
   }
 
   if (props.testId === 'touch') {
-    return 'Confirme si le tactile te semble fiable apres la couverture de la grille.'
+    return 'Confirme le ressenti tactile.'
   }
 
   if (isMultitouchTest.value) {
-    return 'Confirme si plusieurs doigts ont bien ete detectes en meme temps sans coupure.'
+    return 'Confirme la detection simultanee.'
   }
 
   if (props.testId === 'gps') {
-    return 'Confirme si la position et la precision GPS te paraissent coherentes.'
+    return 'Confirme la coherence GPS.'
   }
 
   if (isCameraCaptureTest.value) {
-    return 'Confirme si le flux et la photo de test te semblent nets et exploitables.'
+    return 'Confirme le flux et la capture.'
   }
 
   if (isAutofocusTest.value) {
-    return 'Confirme si la mise au point a bien suivi les deux etapes proche puis loin.'
+    return "Confirme la mise au point."
   }
 
   if (isMicrophoneTest.value) {
-    return 'Confirme si le micro a bien reagi et si le niveau te semble coherent.'
+    return 'Confirme la reaction du micro.'
   }
 
-  return 'Confirme si les mesures capteur te semblent coherentes apres la collecte.'
+  return 'Confirme les mesures.'
 })
 
 const launchButtonLabel = computed(() => {
   if (isSensorTest.value || isMediaTest.value || isMicrophoneTest.value) {
-    return 'Autoriser et commencer'
+    return 'Autoriser'
   }
 
   return 'Commencer'

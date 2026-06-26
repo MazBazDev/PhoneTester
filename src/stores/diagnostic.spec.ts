@@ -16,7 +16,7 @@ describe('diagnostic store', () => {
     const session = store.startSession()
 
     expect(session.id).toBe('session-1')
-    expect(session.steps).toHaveLength(14)
+    expect(session.steps).toHaveLength(13)
     expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.steps).toHaveLength(6)
     expect(JSON.parse(localStorage.getItem('phone-tester.active-session') || '{}').id).toBe('session-1')
   })
@@ -32,7 +32,6 @@ describe('diagnostic store', () => {
         deviceTarget: 'iphone-safari',
         steps: [
           { testId: 'device-info', status: 'completed', result: { testId: 'device-info', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
-          { testId: 'permissions', status: 'completed', result: { testId: 'permissions', status: 'pending', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'screen', status: 'completed', result: { testId: 'screen', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'touch', status: 'completed', result: { testId: 'touch', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'multitouch', status: 'completed', result: { testId: 'multitouch', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
@@ -88,7 +87,7 @@ describe('diagnostic store', () => {
     await store.runTest(session.id, 'device-info')
 
     expect(store.getStepByTestId(session.id, 'device-info')?.result?.testId).toBe('device-info')
-    expect(store.sessionProgress).toBe(7)
+    expect(store.sessionProgress).toBe(8)
   })
 
   it('finalizes compass and gps guided tests', () => {

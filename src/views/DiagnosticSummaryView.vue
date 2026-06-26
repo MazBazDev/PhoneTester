@@ -1,21 +1,21 @@
 <template>
   <AppShell
     v-if="session"
-    eyebrow="Rapport"
-    title="Resume automatique"
-    description="Voici le resume des tests deja implementes du diagnostic iPhone."
+    eyebrow="Resume"
+    title="Diagnostic termine"
+    description="Lecture rapide des points valides et des doutes."
     :progress="store.sessionProgress"
   >
-    <div class="space-y-4">
+    <div class="space-y-3">
       <AppCard>
-        <div class="flex items-center justify-between gap-4">
+        <div class="flex items-start justify-between gap-4">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Score global</p>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Score</p>
             <h2 class="mt-2 text-4xl font-bold text-slate-950">{{ store.currentScore }}%</h2>
-            <p class="mt-2 text-sm text-slate-600">Base sur tous les tests executes dans cette session.</p>
+            <p class="mt-2 text-sm text-slate-600">{{ session.steps.length }} tests analyses</p>
           </div>
           <span
-            class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]"
+            class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
             :class="session.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
           >
             {{ session.status === 'completed' ? 'termine' : 'partiel' }}
@@ -24,40 +24,48 @@
       </AppCard>
 
       <AppCard v-for="step in session.steps" :key="step.testId">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <h3 class="text-base font-semibold text-slate-900">{{ store.getTestDefinition(step.testId)?.name }}</h3>
-            <p class="mt-1 text-sm text-slate-600">
-              {{ step.result?.summary || 'Pas encore execute.' }}
-            </p>
-            <div v-if="step.result?.details?.length" class="mt-3 space-y-2">
-              <img
-                v-if="getPreview(step.testId)"
-                :src="getPreview(step.testId) ?? undefined"
-                :alt="`Capture ${store.getTestDefinition(step.testId)?.name || step.testId}`"
-                class="mb-3 rounded-2xl border border-slate-200 object-cover"
-              />
-              <div
-                v-for="detail in step.result.details"
-                :key="`${step.testId}-${detail.label}`"
-                class="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2"
-              >
-                <span class="text-xs font-medium text-slate-500">{{ detail.label }}</span>
-                <span class="text-xs font-semibold text-slate-900">{{ detail.value }}</span>
-              </div>
-            </div>
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="truncate text-sm font-semibold text-slate-950">{{ store.getTestDefinition(step.testId)?.name }}</h3>
+            <p class="mt-1 truncate text-sm text-slate-600">{{ step.result?.summary || 'Pas encore execute.' }}</p>
           </div>
           <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]" :class="statusClass(step.result?.status)">
             {{ step.result?.status?.replace('_', ' ') || 'pending' }}
           </span>
         </div>
+
+        <details
+          v-if="step.result?.details?.length || getPreview(step.testId)"
+          class="mt-3 rounded-[18px] border border-stone-300/80 bg-[color:var(--color-surface)]"
+          :open="shouldOpen(step.result?.status)"
+        >
+          <summary class="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-slate-700">
+            Details
+          </summary>
+          <div class="space-y-2 border-t border-stone-300/80 px-4 py-3">
+            <img
+              v-if="getPreview(step.testId)"
+              :src="getPreview(step.testId) ?? undefined"
+              :alt="`Capture ${store.getTestDefinition(step.testId)?.name || step.testId}`"
+              class="rounded-2xl border border-stone-300/80 object-cover"
+            />
+            <div
+              v-for="detail in step.result?.details ?? []"
+              :key="`${step.testId}-${detail.label}`"
+              class="flex items-center justify-between gap-3 rounded-2xl bg-white/60 px-3 py-2"
+            >
+              <span class="text-xs font-medium text-slate-500">{{ detail.label }}</span>
+              <span class="text-xs font-semibold text-slate-900">{{ detail.value }}</span>
+            </div>
+          </div>
+        </details>
       </AppCard>
     </div>
 
     <template #actions>
       <AppButton class="flex-1" variant="secondary" @click="reset">Nouvelle session</AppButton>
       <AppButton class="flex-1" @click="resume">
-        {{ firstIncomplete ? 'Reprendre' : 'Relancer les tests' }}
+        {{ firstIncomplete ? 'Reprendre' : 'Relancer' }}
       </AppButton>
     </template>
   </AppShell>
@@ -99,6 +107,8 @@ const statusClass = (status?: TestStatus) => {
 
   return 'bg-slate-200 text-slate-700'
 }
+
+const shouldOpen = (status?: TestStatus) => status === 'warning' || status === 'failed'
 
 const reset = async () => {
   store.resetSession()

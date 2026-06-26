@@ -1,14 +1,16 @@
 <template>
   <article
-    class="flex items-center justify-between rounded-3xl border border-slate-200 bg-slate-50/80 px-4 py-4"
+    class="flex items-center justify-between gap-3 rounded-[18px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3"
   >
-    <div class="pr-4">
-      <h3 class="text-base font-semibold text-slate-900">{{ title }}</h3>
-      <p class="mt-1 text-sm text-slate-600">{{ description }}</p>
+    <div class="min-w-0 pr-3">
+      <h3 :class="variant === 'compact' ? 'text-sm font-semibold text-slate-950' : 'text-base font-semibold text-slate-950'">
+        {{ title }}
+      </h3>
+      <p v-if="description" class="mt-1 text-sm text-slate-600">{{ description }}</p>
     </div>
     <span
-      class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]"
-      :class="completed ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'"
+      class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+      :class="completed ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-slate-600'"
     >
       {{ completed ? 'Pret' : 'A faire' }}
     </span>
@@ -16,9 +18,13 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+withDefaults(defineProps<{
   title: string
-  description: string
+  description?: string
   completed: boolean
-}>()
+  variant?: 'default' | 'compact'
+}>(), {
+  description: undefined,
+  variant: 'default'
+})
 </script>

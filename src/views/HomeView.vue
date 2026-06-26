@@ -1,34 +1,46 @@
 <template>
   <AppShell
-    eyebrow="iPhone diagnostic"
-    title="Teste un iPhone avant achat en moins de 3 minutes"
-    description="Ce premier lot pose le moteur modulaire de diagnostic, optimise pour Safari sur iPhone, avec reprise automatique de session."
+    eyebrow="Phone tester"
+    title="Diagnostic iPhone avant achat"
+    description="Rapide, local, lisible sur iPhone."
   >
-    <div class="space-y-4">
-      <AppCard class="overflow-hidden">
-        <div class="rounded-[24px] bg-slate-950 p-5 text-white">
-          <p class="text-xs uppercase tracking-[0.2em] text-orange-300">Premier lot</p>
-          <h2 class="mt-2 text-2xl font-semibold">14 tests deja jouables</h2>
-          <p class="mt-3 text-sm leading-6 text-slate-300">
-            Informations appareil, permissions, ecran, tactile, multitouch, capteurs, boussole, GPS, camera et micro, avec reprise locale.
-          </p>
+    <div class="space-y-3">
+      <AppCard>
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Session</p>
+            <h2 class="mt-2 text-2xl font-semibold text-slate-950">{{ store.testDefinitions.length }} tests prets</h2>
+            <p class="mt-2 text-sm text-slate-600">
+              Ecran, tactile, capteurs, GPS, micro et cameras.
+            </p>
+          </div>
+          <span class="rounded-full bg-stone-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+            Safari iPhone
+          </span>
         </div>
-        <div class="mt-4 space-y-3">
-          <SectionListItem v-for="test in store.testDefinitions" :key="test.id" :title="test.name" :description="test.description" :completed="Boolean(activeSessionStepIds.has(test.id))" />
+        <div class="mt-4 flex items-center justify-between gap-3 border-t border-stone-300/80 pt-4 text-sm text-slate-600">
+          <span>{{ resumableSession ? 'Session detectee' : 'Aucune session en cours' }}</span>
+          <span class="font-semibold text-slate-950">{{ activeSessionStepIds.size }}/{{ store.testDefinitions.length }}</span>
         </div>
       </AppCard>
 
       <AppCard>
-        <p class="text-sm leading-6 text-slate-600">
-          La session en cours est reprise automatiquement apres refresh grace au stockage local.
-        </p>
+        <div class="space-y-2">
+          <SectionListItem
+            v-for="test in store.testDefinitions"
+            :key="test.id"
+            :title="test.name"
+            :completed="Boolean(activeSessionStepIds.has(test.id))"
+            variant="compact"
+          />
+        </div>
       </AppCard>
     </div>
 
     <template #actions>
       <AppButton v-if="resumableSession" class="flex-1" variant="secondary" @click="resumeSession">Reprendre</AppButton>
       <AppButton class="flex-1" @click="startDiagnostic">
-        {{ resumableSession ? 'Nouvelle session' : 'Demarrer un diagnostic' }}
+        {{ resumableSession ? 'Nouvelle session' : 'Demarrer' }}
       </AppButton>
     </template>
   </AppShell>
@@ -70,6 +82,19 @@ const resumeSession = async () => {
 }
 
 const startDiagnostic = async () => {
-  await router.push({ name: 'diagnostic-intro' })
+  const session = store.startSession()
+  const firstStep = session.steps[0]
+
+  if (!firstStep) {
+    return
+  }
+
+  await router.push({
+    name: 'diagnostic-auto-test',
+    params: {
+      sessionId: session.id,
+      testId: firstStep.testId
+    }
+  })
 }
 </script>

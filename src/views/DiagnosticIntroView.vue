@@ -1,47 +1,49 @@
 <template>
   <AppShell
-    eyebrow="Preparation"
-    title="Prepare ton iPhone pour le diagnostic"
-    description="Ce lot lance deux auto-tests, deux tests visuels, un tactile, un multitouch, quatre tests capteurs, le GPS, trois tests camera et un test micro."
+    eyebrow="Avant de commencer"
+    title="Preparer le telephone"
+    description="Trois verifications, puis lancement."
   >
-    <div class="space-y-4">
+    <div class="space-y-3">
       <AppCard v-if="launchError" class="border border-rose-200 bg-rose-50/80">
         <p class="text-sm font-semibold text-rose-700">Impossible de lancer le diagnostic.</p>
         <p class="mt-2 text-sm leading-6 text-rose-700">{{ launchError }}</p>
       </AppCard>
 
       <AppCard>
-        <ul class="space-y-3 text-sm leading-6 text-slate-700">
-          <li>Utilise Safari sur iPhone pour un resultat representatif.</li>
-          <li>Autorise la geolocalisation et garde le navigateur actif.</li>
-          <li>Prevois aussi quelques mouvements, rotations, l'acces a la localisation, la camera et le microphone.</li>
-        </ul>
+        <div class="flex flex-wrap gap-2">
+          <span class="rounded-full border border-stone-300 bg-[color:var(--color-surface)] px-3 py-2 text-xs font-semibold text-slate-700">
+            Safari sur iPhone
+          </span>
+          <span class="rounded-full border border-stone-300 bg-[color:var(--color-surface)] px-3 py-2 text-xs font-semibold text-slate-700">
+            Permissions actives
+          </span>
+          <span class="rounded-full border border-stone-300 bg-[color:var(--color-surface)] px-3 py-2 text-xs font-semibold text-slate-700">
+            2 a 3 min
+          </span>
+        </div>
       </AppCard>
 
       <AppCard>
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Tests inclus</p>
-        <div class="mt-4 space-y-3">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Parcours</p>
+          <span class="text-sm font-semibold text-slate-950">{{ store.testDefinitions.length }} tests</span>
+        </div>
+        <div class="space-y-2">
           <SectionListItem
             v-for="test in store.testDefinitions"
             :key="test.id"
             :title="test.name"
-            :description="test.description"
             :completed="false"
+            variant="compact"
           />
-        </div>
-      </AppCard>
-
-      <AppCard class="md:hidden">
-        <div class="grid grid-cols-1 gap-3">
-          <AppButton class="w-full" variant="secondary" @click="goHome">Retour</AppButton>
-          <AppButton class="w-full" @click="begin">Lancer le diagnostic</AppButton>
         </div>
       </AppCard>
     </div>
 
     <template #actions>
-      <AppButton class="hidden flex-1 md:inline-flex" variant="secondary" @click="goHome">Retour</AppButton>
-      <AppButton class="hidden flex-1 md:inline-flex" @click="begin">Lancer le diagnostic</AppButton>
+      <AppButton class="flex-1" variant="secondary" @click="goHome">Retour</AppButton>
+      <AppButton class="flex-1" @click="begin">Lancer</AppButton>
     </template>
   </AppShell>
 </template>

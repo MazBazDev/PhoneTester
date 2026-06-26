@@ -1,6 +1,5 @@
 import type { DiagnosticTestDefinition } from '../domain/diagnostic'
 import { useDeviceInfoTest } from '../composables/useDeviceInfoTest'
-import { usePermissionsTest } from '../composables/usePermissionsTest'
 import { useScreenTest } from '../composables/useScreenTest'
 import { useTouchTest } from '../composables/useTouchTest'
 import { useMultitouchTest } from '../composables/useMultitouchTest'
@@ -16,7 +15,6 @@ import { useMicrophoneTest } from '../composables/useMicrophoneTest'
 
 export const diagnosticTests: DiagnosticTestDefinition[] = [
   useDeviceInfoTest(),
-  usePermissionsTest(),
   useScreenTest(),
   useTouchTest(),
   useMultitouchTest(),

@@ -17,7 +17,6 @@ describe('HomeView', () => {
       history: createMemoryHistory(),
       routes: [
         { path: '/', name: 'home', component: HomeView },
-        { path: '/intro', name: 'diagnostic-intro', component: { template: '<div />' } },
         {
           path: '/diagnostic/:sessionId/auto/:testId',
           name: 'diagnostic-auto-test',
@@ -35,12 +34,12 @@ describe('HomeView', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('Demarrer un diagnostic')
-    expect(wrapper.text()).toContain('14 tests deja jouables')
+    expect(wrapper.text()).toContain('Demarrer')
+    expect(wrapper.text()).toContain('13 tests prets')
 
     await wrapper.get('button').trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.name).toBe('diagnostic-intro')
+    expect(router.currentRoute.value.name).toBe('diagnostic-auto-test')
   })
 })
