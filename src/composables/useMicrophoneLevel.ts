@@ -4,6 +4,21 @@ export type MicrophonePermissionState = 'unknown' | 'granted' | 'denied' | 'not_
 
 const isBrowser = () => typeof window !== 'undefined'
 
+type BrowserAudioContext = typeof AudioContext & {
+  new (): AudioContext
+}
+
+const getAudioContextCtor = (): BrowserAudioContext | null => {
+  if (!isBrowser()) {
+    return null
+  }
+
+  const candidate = (window.AudioContext ||
+    (window as Window & { webkitAudioContext?: BrowserAudioContext }).webkitAudioContext) as BrowserAudioContext | undefined
+
+  return candidate ?? null
+}
+
 export const useMicrophoneLevel = () => {
   const supported = ref(true)
   const permissionState = ref<MicrophonePermissionState>('unknown')
@@ -38,6 +53,7 @@ export const useMicrophoneLevel = () => {
     dataArray = null
     activeStream.value = null
     level.value = 0
+    soundDetected.value = false
   }
 
   const tickLevel = () => {
@@ -65,30 +81,10 @@ export const useMicrophoneLevel = () => {
     animationFrameId = requestAnimationFrame(tickLevel)
   }
 
-  const requestPermission = async (): Promise<MicrophonePermissionState> => {
-    if (!isBrowser() || !navigator.mediaDevices?.getUserMedia) {
-      supported.value = false
-      permissionState.value = 'not_supported'
-      return 'not_supported'
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false
-      })
-
-      permissionState.value = 'granted'
-      stream.getTracks().forEach((track) => track.stop())
-      return 'granted'
-    } catch {
-      permissionState.value = 'denied'
-      return 'denied'
-    }
-  }
-
   const startStream = async () => {
-    if (!isBrowser() || !navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
+    const AudioContextCtor = getAudioContextCtor()
+
+    if (!isBrowser() || !navigator.mediaDevices?.getUserMedia || !AudioContextCtor) {
       supported.value = false
       permissionState.value = 'not_supported'
       return null
@@ -108,7 +104,10 @@ export const useMicrophoneLevel = () => {
         video: false
       })
 
-      audioContext = new window.AudioContext()
+      audioContext = new AudioContextCtor()
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume()
+      }
       analyser = audioContext.createAnalyser()
       analyser.fftSize = 1024
       dataArray = new Uint8Array(new ArrayBuffer(analyser.fftSize))
@@ -131,7 +130,6 @@ export const useMicrophoneLevel = () => {
     level,
     peakLevel,
     permissionState,
-    requestPermission,
     soundDetected,
     startStream,
     stopStream,

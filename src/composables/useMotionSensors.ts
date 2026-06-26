@@ -118,7 +118,13 @@ const hasSensorSupport = (mode: SensorMode) => {
   }
 
   if (mode === 'rotation' || mode === 'compass') {
-    return 'DeviceOrientationEvent' in window || 'onorientationchange' in window || 'orientation' in screen
+    return (
+      'DeviceOrientationEvent' in window ||
+      'ondeviceorientation' in window ||
+      'ondeviceorientationabsolute' in window ||
+      'onorientationchange' in window ||
+      'orientation' in screen
+    )
   }
 
   if (mode === 'accelerometer') {
@@ -320,9 +326,14 @@ export const useMotionSensors = () => {
         onSample(sample)
       }
 
-      if ('DeviceOrientationEvent' in window) {
+      if ('DeviceOrientationEvent' in window || 'ondeviceorientation' in window) {
         window.addEventListener('deviceorientation', handleCompass)
         cleanups.push(() => window.removeEventListener('deviceorientation', handleCompass))
+      }
+
+      if ('ondeviceorientationabsolute' in window) {
+        window.addEventListener('deviceorientationabsolute', handleCompass as EventListener)
+        cleanups.push(() => window.removeEventListener('deviceorientationabsolute', handleCompass as EventListener))
       }
 
       return

@@ -341,13 +341,34 @@
           </section>
 
           <section v-else-if="isMicrophoneTest && guidedState.phase === 'active'">
-            <MicrophoneLivePanel
-              hint="Parle ou tapote pres du micro. Le niveau et le pic doivent reagir rapidement."
-              :level="microphoneLevel"
-              :peak-level="microphonePeakLevel"
-              :sound-detected="microphoneSoundDetected"
-              :permission-state="String(guidedState.metrics.permissionState ?? microphoneRuntime.permissionState.value)"
-            />
+            <div class="space-y-4">
+              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Microphone</p>
+                    <h2 class="mt-2 text-2xl font-bold text-slate-950">Fais monter le signal audio</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                      Parle, souffle ou tapote pres du micro. Le test avance seul des qu’un signal exploitable est detecte.
+                    </p>
+                  </div>
+                  <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="badgeClass">
+                    {{ badgeLabel }}
+                  </span>
+                </div>
+              </div>
+
+              <MicrophoneLivePanel
+                hint="Parle ou tapote pres du micro. Le niveau et le pic doivent reagir rapidement."
+                :level="microphoneLevel"
+                :peak-level="microphonePeakLevel"
+                :sound-detected="microphoneSoundDetected"
+                :permission-state="String(guidedState.metrics.permissionState ?? microphoneRuntime.permissionState.value)"
+              />
+
+              <div class="flex justify-end">
+                <AppButton variant="secondary" @click="retryMicrophoneTest">Relancer le micro</AppButton>
+              </div>
+            </div>
           </section>
 
           <section v-else-if="isMediaTest && guidedState.phase === 'active'">
@@ -716,7 +737,7 @@ const isLastGuidedSubStep = computed(() => {
   return guidedState.value.currentStepIndex >= guidedState.value.steps.length - 1
 })
 const requiresSystemPermission = computed(() =>
-  ['compass', 'gps', 'camera-rear', 'camera-front', 'autofocus', 'microphone'].includes(
+  ['compass', 'gps', 'camera-rear', 'camera-front', 'autofocus'].includes(
     props.testId
   )
 )
@@ -1359,31 +1380,30 @@ const launchCameraTest = async () => {
 }
 
 const launchMicrophoneTest = async () => {
-  const permission = await microphoneRuntime.requestPermission()
+  const stream = await microphoneRuntime.startStream()
+  const permission = microphoneRuntime.permissionState.value
 
   store.updateGuidedMetrics(props.sessionId, props.testId, {
     supported: microphoneRuntime.supported.value,
     permissionState: permission,
-    streamOpened: false,
-    level: 0,
-    peakLevel: 0,
-    soundDetected: false
-  })
-
-  if (permission === 'denied' || permission === 'not_supported') {
-    return
-  }
-
-  const stream = await microphoneRuntime.startStream()
-
-  store.updateGuidedMetrics(props.sessionId, props.testId, {
-    supported: microphoneRuntime.supported.value,
-    permissionState: microphoneRuntime.permissionState.value,
     streamOpened: Boolean(stream),
     level: microphoneRuntime.level.value,
     peakLevel: microphoneRuntime.peakLevel.value,
     soundDetected: microphoneRuntime.soundDetected.value
   })
+
+  if (microphoneRuntime.soundDetected.value) {
+    microphoneRuntime.stopStream()
+    store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+  }
+}
+
+const retryMicrophoneTest = async () => {
+  if (!isMicrophoneTest.value || guidedState.value?.phase !== 'active') {
+    return
+  }
+
+  await launchMicrophoneTest()
 }
 
 const launchGuidedTest = async () => {
@@ -1850,6 +1870,11 @@ watch(
       },
       { persist: false }
     )
+
+    if (soundDetected) {
+      microphoneRuntime.stopStream()
+      store.moveGuidedTestToConfirm(sessionId, testId)
+    }
   }
 )
 

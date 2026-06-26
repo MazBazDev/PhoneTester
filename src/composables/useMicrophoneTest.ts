@@ -28,7 +28,7 @@ const buildMicrophoneStatus = (state: DiagnosticGuidedState): TestStatus => {
   }
 
   if (permissionState === 'denied' || !streamOpened) {
-    return 'failed'
+    return 'warning'
   }
 
   if (soundDetected && state.userVerdict === 'pass') {
