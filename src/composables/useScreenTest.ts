@@ -51,13 +51,18 @@ const screenSteps = [
   }
 ] as const
 
-const getDefectCount = (state: DiagnosticGuidedState) => state.steps.filter((step) => step.response === 'yes').length
+const getFlaggedStepIds = (state: DiagnosticGuidedState) =>
+  Array.isArray(state.metrics.flaggedStepIds) ? (state.metrics.flaggedStepIds as string[]) : []
+
+const isStepFlagged = (state: DiagnosticGuidedState, stepId: string) => getFlaggedStepIds(state).includes(stepId)
+
+const getDefectCount = (state: DiagnosticGuidedState) => getFlaggedStepIds(state).length
 
 const buildDetails = (state: DiagnosticGuidedState): DiagnosticTestDetail[] =>
   state.steps.map((step) => ({
     label: step.label,
-    value: step.response === 'yes' ? 'defaut signale' : 'aucun defaut signale',
-    status: step.response === 'yes' ? 'warning' : 'pass'
+    value: isStepFlagged(state, step.id) ? 'doute signale' : 'rien signale',
+    status: isStepFlagged(state, step.id) ? 'warning' : 'pass'
   }))
 
 const buildStatus = (state: DiagnosticGuidedState): TestStatus => {
@@ -88,7 +93,9 @@ export const useScreenTest = (): DiagnosticTestDefinition => ({
       status: 'pending',
       response: null
     })),
-    metrics: {},
+    metrics: {
+      flaggedStepIds: []
+    },
     userVerdict: null
   }),
   finalizeGuidedResult: (state: DiagnosticGuidedState): DiagnosticTestRunResult => {

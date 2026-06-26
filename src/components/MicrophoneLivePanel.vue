@@ -1,33 +1,36 @@
 <template>
   <div class="space-y-4">
-    <div class="rounded-[30px] border border-slate-200 bg-white/85 p-5 shadow-sm">
-      <div class="flex items-start justify-between gap-4">
+    <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
+      <div class="flex items-start justify-between gap-3">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Micro live</p>
-          <p class="mt-2 text-sm leading-6 text-slate-600">{{ hint }}</p>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Microphone</p>
+          <p class="mt-1 text-sm text-slate-600">{{ hint }}</p>
         </div>
-        <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]" :class="permissionClass">
+        <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="permissionClass">
           {{ permissionLabel }}
         </span>
       </div>
     </div>
 
-    <div class="rounded-[30px] border border-slate-200 bg-slate-950 p-6 text-white shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">Niveau instantane</p>
-      <div class="mt-5 h-5 overflow-hidden rounded-full bg-white/10">
-        <div class="h-full rounded-full bg-linear-to-r from-orange-500 to-amber-300 transition-all duration-100" :style="{ width: `${Math.max(4, levelPercent)}%` }" />
+    <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
+      <div class="flex items-center justify-between gap-4">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Niveau instantane</p>
+        <p class="text-sm font-semibold text-slate-950">{{ levelPercent }}%</p>
       </div>
-      <div class="mt-6 grid grid-cols-2 gap-3">
-        <div class="rounded-2xl bg-white/10 px-4 py-3">
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">Niveau</p>
-          <p class="mt-1 text-xl font-bold">{{ levelPercent }}%</p>
+      <div class="mt-3 h-3 overflow-hidden rounded-full bg-stone-300/80">
+        <div class="h-full rounded-full bg-slate-950 transition-all duration-100" :style="{ width: `${Math.max(4, levelPercent)}%` }" />
+      </div>
+      <div class="mt-4 grid grid-cols-2 gap-3 border-t border-stone-300/80 pt-4">
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Niveau</p>
+          <p class="mt-1 text-xl font-bold text-slate-950">{{ levelPercent }}%</p>
         </div>
-        <div class="rounded-2xl bg-white/10 px-4 py-3">
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">Pic</p>
-          <p class="mt-1 text-xl font-bold">{{ peakPercent }}%</p>
+        <div class="text-right">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Pic</p>
+          <p class="mt-1 text-xl font-bold text-slate-950">{{ peakPercent }}%</p>
         </div>
       </div>
-      <p class="mt-4 text-sm font-medium" :class="soundDetected ? 'text-emerald-300' : 'text-slate-300'">
+      <p class="mt-4 text-sm font-medium" :class="soundDetected ? 'text-emerald-700' : 'text-slate-600'">
         {{ soundDetected ? 'Un son a bien ete detecte.' : 'Parle ou souffle pour faire monter le niveau.' }}
       </p>
     </div>

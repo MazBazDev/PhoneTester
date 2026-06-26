@@ -74,8 +74,12 @@
               class="mt-auto grid grid-cols-2 gap-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
               :class="screenImmersiveActive ? 'bg-transparent' : ''"
             >
-              <AppButton class="w-full" variant="secondary" @click="answerScreen('no')">Aucun defaut</AppButton>
-              <AppButton class="w-full" @click="answerScreen('yes')">Defaut visible</AppButton>
+              <AppButton class="w-full" variant="secondary" @click="toggleScreenConcern">
+                {{ currentScreenStepFlagged ? 'Doute marque' : 'Marquer un doute' }}
+              </AppButton>
+              <AppButton class="w-full" @click="advanceScreenStep">
+                {{ isLastGuidedSubStep ? 'Terminer la sequence' : 'Couleur suivante' }}
+              </AppButton>
             </div>
           </section>
 
@@ -109,7 +113,7 @@
             />
           </section>
 
-          <AppCard v-else-if="isSensorTest && guidedState.phase === 'active'" class="bg-slate-50/90">
+          <section v-else-if="isSensorTest && guidedState.phase === 'active'">
             <SensorLivePanel
               :title="sensorPanelTitle"
               :hint="sensorPanelHint"
@@ -124,9 +128,9 @@
               :gps-main-value="gpsMainValue"
               :gps-secondary-label="gpsSecondaryLabel"
             />
-          </AppCard>
+          </section>
 
-          <AppCard v-else-if="isMicrophoneTest && guidedState.phase === 'active'" class="bg-slate-50/90">
+          <section v-else-if="isMicrophoneTest && guidedState.phase === 'active'">
             <MicrophoneLivePanel
               hint="Parle ou tapote pres du micro. Le niveau et le pic doivent reagir rapidement."
               :level="microphoneLevel"
@@ -134,18 +138,25 @@
               :sound-detected="microphoneSoundDetected"
               :permission-state="String(guidedState.metrics.permissionState ?? microphoneRuntime.permissionState.value)"
             />
-          </AppCard>
+          </section>
 
-          <AppCard v-else-if="isMediaTest && guidedState.phase === 'active'" class="bg-slate-50/90">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              {{ isAutofocusTest ? 'Mise au point' : 'Flux camera' }}
-            </p>
-            <h2 class="mt-3 text-2xl font-bold text-slate-950">
-              {{ currentGuidedSubStep?.label || 'Verification camera' }}
-            </h2>
-            <p class="mt-3 text-sm leading-6 text-slate-600">
-              {{ currentGuidedSubStep?.instruction || 'Observe le flux puis valide le comportement attendu.' }}
-            </p>
+          <section v-else-if="isMediaTest && guidedState.phase === 'active'">
+            <div class="mb-4 flex items-start justify-between gap-3 rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3">
+              <div>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  {{ isAutofocusTest ? 'Mise au point' : 'Camera' }}
+                </p>
+                <h2 class="mt-1 text-2xl font-bold text-slate-950">
+                  {{ currentGuidedSubStep?.label || 'Verification camera' }}
+                </h2>
+                <p class="mt-1 text-sm text-slate-600">
+                  {{ currentGuidedSubStep?.instruction || 'Observe le flux puis valide le comportement attendu.' }}
+                </p>
+              </div>
+              <span class="shrink-0 rounded-full bg-stone-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+                {{ isAutofocusTest ? 'guide' : 'live' }}
+              </span>
+            </div>
             <div class="mt-5">
               <CameraLivePanel
                 ref="cameraPanelRef"
@@ -160,7 +171,7 @@
                 @switch-device="switchRearDevice"
               />
             </div>
-          </AppCard>
+          </section>
 
             <AppCard v-else-if="guidedState.phase === 'confirm' || step.result">
             <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Validation</p>
@@ -236,9 +247,9 @@
               </div>
             </div>
 
-            <div v-if="!step.result" class="mt-5 grid grid-cols-1 gap-3">
-              <AppButton class="w-full" variant="secondary" @click="confirmGuided('pass')">Conforme</AppButton>
-              <AppButton class="w-full" @click="confirmGuided('warning')">Doute</AppButton>
+            <div v-if="!step.result" class="mt-5 grid grid-cols-2 gap-3">
+              <AppButton class="w-full" variant="secondary" @click="confirmGuided('warning')">Doute</AppButton>
+              <AppButton class="w-full" @click="confirmGuided('pass')">Conforme</AppButton>
             </div>
 
             <div v-else class="mt-5 space-y-3">
@@ -270,7 +281,7 @@
       </div>
 
       <template #actions>
-        <AppButton class="flex-1" variant="ghost" @click="quitDiagnostic">Quitter</AppButton>
+        <AppButton class="flex-1" variant="secondary" @click="quitDiagnostic">Quitter</AppButton>
 
         <AppButton
           v-if="testDefinition.mode === 'automatic' && !step.result"
@@ -293,7 +304,7 @@
           class="flex-1"
           @click="finishMultitouchCollection"
         >
-          Terminer la collecte
+          Passer a la validation
         </AppButton>
 
         <AppButton
@@ -301,7 +312,7 @@
           class="flex-1"
           @click="finishSensorCollection"
         >
-          Terminer la collecte
+          Passer a la validation
         </AppButton>
 
         <AppButton
@@ -309,7 +320,7 @@
           class="flex-1"
           @click="finishMicrophoneCollection"
         >
-          Terminer la collecte
+          Passer a la validation
         </AppButton>
 
         <AppButton
@@ -419,6 +430,20 @@ const showRearDeviceSelector = computed(
 )
 const currentCaptureUrl = computed(() => getSessionCapture(props.sessionId, props.testId))
 const currentAutofocusStepId = computed(() => currentGuidedSubStep.value?.id ?? null)
+const flaggedScreenStepIds = computed(() => {
+  const value = guidedState.value?.metrics.flaggedStepIds
+  return Array.isArray(value) ? value : []
+})
+const currentScreenStepFlagged = computed(() =>
+  Boolean(currentGuidedSubStep.value?.id && flaggedScreenStepIds.value.includes(currentGuidedSubStep.value.id))
+)
+const isLastGuidedSubStep = computed(() => {
+  if (!guidedState.value) {
+    return false
+  }
+
+  return guidedState.value.currentStepIndex >= guidedState.value.steps.length - 1
+})
 const requiresSystemPermission = computed(() =>
   ['rotation', 'accelerometer', 'gyroscope', 'compass', 'gps', 'camera-rear', 'camera-front', 'autofocus', 'microphone'].includes(
     props.testId
@@ -825,11 +850,11 @@ const mediaPrimaryActionLabel = computed(() => {
   }
 
   if (currentAutofocusStepId.value === 'autofocus-near') {
-    return "Valider l'etape proche"
+    return 'Etape suivante'
   }
 
   if (currentAutofocusStepId.value === 'autofocus-far') {
-    return "Valider l'etape loin"
+    return 'Passer a la validation'
   }
 
   return 'Continuer'
@@ -1213,8 +1238,28 @@ const validateAutofocusStep = () => {
   }
 }
 
-const answerScreen = (response: 'yes' | 'no') => {
-  store.recordGuidedStepResponse(props.sessionId, props.testId, response)
+const toggleScreenConcern = () => {
+  const stepId = currentGuidedSubStep.value?.id
+
+  if (props.testId !== 'screen' || !stepId) {
+    return
+  }
+
+  const nextFlaggedStepIds = flaggedScreenStepIds.value.includes(stepId)
+    ? flaggedScreenStepIds.value.filter((entry) => entry !== stepId)
+    : [...flaggedScreenStepIds.value, stepId]
+
+  store.updateGuidedMetrics(props.sessionId, props.testId, {
+    flaggedStepIds: nextFlaggedStepIds
+  })
+}
+
+const advanceScreenStep = () => {
+  if (props.testId !== 'screen') {
+    return
+  }
+
+  store.completeGuidedStep(props.sessionId, props.testId)
 }
 
 const finishTouchCollection = (mode: 'auto' | 'gesture') => {

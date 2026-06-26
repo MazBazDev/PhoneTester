@@ -1,6 +1,16 @@
 <template>
   <div class="space-y-4">
-    <div class="relative overflow-hidden rounded-[28px] bg-slate-950">
+    <div class="overflow-hidden rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)]">
+      <div class="flex items-start justify-between gap-3 border-b border-stone-300/80 px-4 py-3">
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Camera active</p>
+          <p class="mt-1 text-sm font-medium text-slate-700">{{ activeDeviceLabel }}</p>
+        </div>
+        <span class="rounded-full bg-stone-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+          live
+        </span>
+      </div>
+      <div class="relative overflow-hidden bg-slate-950">
       <video
         ref="videoElement"
         class="aspect-[3/4] w-full object-cover"
@@ -18,19 +28,16 @@
           </span>
         </div>
       </div>
-      <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/90 to-transparent px-4 py-4 text-white">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Camera active</p>
-        <p class="mt-1 text-sm font-semibold">{{ activeDeviceLabel }}</p>
       </div>
     </div>
 
     <div v-if="showDeviceSelector && availableDevices.length > 1" class="space-y-2">
-      <label class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500" for="camera-device">
+      <label class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500" for="camera-device">
         Objectif
       </label>
       <select
         id="camera-device"
-        class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+        class="w-full rounded-[18px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
         :value="selectedDeviceId ?? ''"
         @change="onDeviceChange"
       >
@@ -40,9 +47,9 @@
       </select>
     </div>
 
-    <div v-if="previewUrl" class="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
-      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Derniere capture</p>
-      <img :src="previewUrl" alt="Capture de test" class="mt-3 rounded-2xl border border-slate-200 object-cover" />
+    <div v-if="previewUrl" class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Derniere capture</p>
+      <img :src="previewUrl" alt="Capture de test" class="mt-3 rounded-2xl border border-stone-300/80 object-cover" />
     </div>
   </div>
 </template>

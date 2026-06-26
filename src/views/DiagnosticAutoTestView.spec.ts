@@ -121,6 +121,61 @@ describe('DiagnosticAutoTestView', () => {
     expect(exitFullscreen).toHaveBeenCalled()
   })
 
+  it('uses a collect-then-confirm flow for the screen test', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+    store.startGuidedTest(session.id, 'screen')
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/screen`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'screen'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    expect(wrapper.text()).toContain('Marquer un doute')
+    expect(wrapper.text()).toContain('Couleur suivante')
+    expect(wrapper.text()).not.toContain('Aucun defaut')
+    expect(wrapper.text()).not.toContain('Defaut visible')
+
+    for (let index = 0; index < 5; index += 1) {
+      await wrapper.findAll('button').find((button) => button.text() === 'Couleur suivante')?.trigger('click')
+      await nextTick()
+    }
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Terminer la sequence')?.trigger('click')
+    await nextTick()
+
+    expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.phase).toBe('confirm')
+    expect(wrapper.text()).toContain('Verdict visuel final')
+  })
+
   it('renders touch test as a pure fullscreen grid without helper text', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
