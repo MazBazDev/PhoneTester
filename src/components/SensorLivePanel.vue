@@ -60,9 +60,12 @@
               <div class="absolute left-4 text-xs font-semibold text-slate-500">O</div>
               <div class="absolute right-4 text-xs font-semibold text-slate-500">E</div>
               <div
-                class="absolute h-20 w-1 origin-bottom rounded-full bg-slate-950 transition-transform duration-150"
+                class="absolute left-1/2 top-1/2 h-20 w-1 -translate-x-1/2 -translate-y-full origin-bottom transition-transform duration-150"
                 :style="compassNeedleTransform"
-              />
+              >
+                <div class="h-full w-full rounded-full bg-slate-950" />
+                <div class="absolute left-1/2 top-0 h-4 w-4 -translate-x-1/2 -translate-y-1 rounded-full bg-rose-500" />
+              </div>
               <div class="absolute h-4 w-4 rounded-full bg-slate-950" />
             </div>
           </div>
@@ -177,7 +180,9 @@ const phoneTransform = computed(
 
 const compassNeedleTransform = computed(() => {
   const heading = typeof props.compassHeading === 'number' ? props.compassHeading : 0
-  return `rotate(${heading}deg) translateY(-4px)`
+  return {
+    transform: `translate(-50%, -100%) rotate(${heading}deg)`
+  }
 })
 
 const compassLabel = computed(() =>
