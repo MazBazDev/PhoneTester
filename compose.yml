@@ -1,0 +1,21 @@
+services:
+  phone-tester:
+    build:
+      context: .
+    image: phone-tester:latest
+    container_name: phone-tester
+    restart: unless-stopped
+    networks:
+      - traefik_public
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "traefik_public"
+      traefik.http.routers.phone-tester.rule: "Host(`iphone.mazbaz.fr`)"
+      traefik.http.routers.phone-tester.entrypoints: "websecure"
+      traefik.http.routers.phone-tester.tls: "true"
+      traefik.http.routers.phone-tester.tls.certresolver: "leresolver"
+      traefik.http.services.phone-tester.loadbalancer.server.port: "80"
+
+networks:
+  traefik_public:
+    external: true
