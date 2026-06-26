@@ -99,15 +99,15 @@
             </div>
           </section>
 
-          <AppCard v-else-if="isMultitouchTest && guidedState.phase === 'active'" class="bg-slate-50/90">
+          <section v-else-if="isMultitouchTest && guidedState.phase === 'active'">
             <MultitouchPadPanel
-              title="Multitouch live"
-              hint="Pose 2 puis 3 doigts ensemble sur la zone pour verifier la detection simultanee."
+              title="Multitouch"
+              hint="Monte le compteur avec plusieurs doigts poses en meme temps."
               :active-touches="multitouchActiveTouches"
               :max-touches="multitouchMaxSimultaneousTouches"
               @track="trackMultitouchPad"
             />
-          </AppCard>
+          </section>
 
           <AppCard v-else-if="isSensorTest && guidedState.phase === 'active'" class="bg-slate-50/90">
             <SensorLivePanel

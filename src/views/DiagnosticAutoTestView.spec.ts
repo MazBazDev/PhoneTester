@@ -204,7 +204,8 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('Multitouch live')
+    expect(wrapper.text()).toContain('Multitouch')
+    expect(wrapper.text()).toContain('0 actif')
     expect(wrapper.text()).toContain('Maximum')
   })
 })
