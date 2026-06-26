@@ -72,12 +72,34 @@
             />
             <div
               class="mt-auto grid grid-cols-2 gap-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
-              :class="screenImmersiveActive ? 'bg-transparent' : ''"
+              :class="
+                screenImmersiveActive
+                  ? 'mx-auto w-full max-w-[22rem] bg-transparent'
+                  : ''
+              "
             >
-              <AppButton class="w-full" variant="secondary" @click="toggleScreenConcern">
+              <AppButton
+                class="w-full"
+                :class="
+                  screenImmersiveActive
+                    ? 'min-h-10 rounded-full border-white/20 bg-black/12 px-3 py-2 text-xs font-medium text-current backdrop-blur-sm'
+                    : ''
+                "
+                :variant="screenImmersiveActive ? 'ghost' : 'secondary'"
+                @click="toggleScreenConcern"
+              >
                 {{ currentScreenStepFlagged ? 'Doute marque' : 'Marquer un doute' }}
               </AppButton>
-              <AppButton class="w-full" @click="advanceScreenStep">
+              <AppButton
+                class="w-full"
+                :class="
+                  screenImmersiveActive
+                    ? 'min-h-10 rounded-full border border-white/20 bg-black/12 px-3 py-2 text-xs font-medium text-current backdrop-blur-sm'
+                    : ''
+                "
+                :variant="screenImmersiveActive ? 'ghost' : 'primary'"
+                @click="advanceScreenStep"
+              >
                 {{ isLastGuidedSubStep ? 'Terminer la sequence' : 'Couleur suivante' }}
               </AppButton>
             </div>
@@ -384,6 +406,7 @@ const lastTouchTapAt = ref(0)
 const touchTapCount = ref(0)
 const launchInFlight = ref(false)
 const autoStartedTestKey = ref<string | null>(null)
+const defaultThemeColor = '#0f172a'
 
 const session = computed(() => store.getSessionById(props.sessionId))
 const testDefinition = computed(() => store.getTestDefinition(props.testId))
@@ -922,18 +945,21 @@ const syncImmersiveScreenChrome = () => {
 
   const root = document.documentElement
   const body = document.body
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]')
 
   if (screenImmersiveActive.value) {
     const background = currentGuidedSubStep.value?.color || '#020617'
     root.classList.add('immersive-screen')
     body.classList.add('immersive-screen')
     root.style.setProperty('--immersive-screen-color', background)
+    themeColorMeta?.setAttribute('content', background)
     return
   }
 
   root.classList.remove('immersive-screen')
   body.classList.remove('immersive-screen')
   root.style.removeProperty('--immersive-screen-color')
+  themeColorMeta?.setAttribute('content', defaultThemeColor)
 }
 
 const handleScreenProbeTouch = () => {
