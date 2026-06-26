@@ -41,7 +41,7 @@ export const useDeviceInfoTest = (): DiagnosticTestDefinition => ({
   name: 'Informations appareil',
   description: 'Releve automatiquement les donnees utiles du navigateur et de l’ecran.',
   icon: 'iphone',
-  automatic: true,
+  mode: 'automatic',
   async run(): Promise<DiagnosticTestRunResult> {
     const startedAt = new Date().toISOString()
     const { userAgent, platform, isIOS, isSafari } = detectEnvironment()

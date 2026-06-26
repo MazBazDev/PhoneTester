@@ -3,6 +3,12 @@ import { useDeviceInfoTest } from './useDeviceInfoTest'
 
 describe('useDeviceInfoTest', () => {
   it('returns warning outside iphone safari', async () => {
+    const definition = useDeviceInfoTest()
+
+    if (!definition.run) {
+      throw new Error('device info test unavailable')
+    }
+
     vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 Chrome')
     vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('MacIntel')
     vi.spyOn(window.navigator, 'language', 'get').mockReturnValue('fr-FR')
@@ -20,7 +26,7 @@ describe('useDeviceInfoTest', () => {
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(844)
     vi.spyOn(window, 'devicePixelRatio', 'get').mockReturnValue(3)
 
-    const result = await useDeviceInfoTest().run()
+    const result = await definition.run()
 
     expect(result.testId).toBe('device-info')
     expect(result.status).toBe('warning')

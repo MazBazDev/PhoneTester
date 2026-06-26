@@ -3,7 +3,7 @@
     v-if="session"
     eyebrow="Rapport"
     title="Resume automatique"
-    description="Voici les deux premiers auto-tests reels du diagnostic iPhone."
+    description="Voici le resume des tests deja implementes du diagnostic iPhone."
     :progress="store.sessionProgress"
   >
     <div class="space-y-4">
@@ -12,7 +12,7 @@
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Score global</p>
             <h2 class="mt-2 text-4xl font-bold text-slate-950">{{ store.currentScore }}%</h2>
-            <p class="mt-2 text-sm text-slate-600">Base sur les tests automatiques executes dans cette session.</p>
+            <p class="mt-2 text-sm text-slate-600">Base sur tous les tests executes dans cette session.</p>
           </div>
           <span
             class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]"
@@ -30,6 +30,22 @@
             <p class="mt-1 text-sm text-slate-600">
               {{ step.result?.summary || 'Pas encore execute.' }}
             </p>
+            <div v-if="step.result?.details?.length" class="mt-3 space-y-2">
+              <img
+                v-if="getPreview(step.testId)"
+                :src="getPreview(step.testId) ?? undefined"
+                :alt="`Capture ${store.getTestDefinition(step.testId)?.name || step.testId}`"
+                class="mb-3 rounded-2xl border border-slate-200 object-cover"
+              />
+              <div
+                v-for="detail in step.result.details"
+                :key="`${step.testId}-${detail.label}`"
+                class="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2"
+              >
+                <span class="text-xs font-medium text-slate-500">{{ detail.label }}</span>
+                <span class="text-xs font-semibold text-slate-900">{{ detail.value }}</span>
+              </div>
+            </div>
           </div>
           <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]" :class="statusClass(step.result?.status)">
             {{ step.result?.status?.replace('_', ' ') || 'pending' }}
@@ -54,6 +70,7 @@ import AppButton from '../components/AppButton.vue'
 import AppCard from '../components/AppCard.vue'
 import AppShell from '../components/AppShell.vue'
 import type { TestStatus } from '../domain/diagnostic'
+import { getSessionCapture } from '../lib/sessionMedia'
 import { useDiagnosticStore } from '../stores/diagnostic'
 
 const props = defineProps<{
@@ -65,6 +82,7 @@ const store = useDiagnosticStore()
 
 const session = computed(() => store.getSessionById(props.sessionId))
 const firstIncomplete = computed(() => store.getFirstIncompleteStep(props.sessionId))
+const getPreview = (testId: string) => getSessionCapture(props.sessionId, testId)
 
 const statusClass = (status?: TestStatus) => {
   if (status === 'pass') {

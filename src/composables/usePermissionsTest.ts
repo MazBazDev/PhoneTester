@@ -68,7 +68,7 @@ export const usePermissionsTest = (): DiagnosticTestDefinition => ({
   name: 'Permissions',
   description: 'Inspecte les permissions cles avant les futurs tests media et capteurs.',
   icon: 'lock',
-  automatic: true,
+  mode: 'automatic',
   async run(): Promise<DiagnosticTestRunResult> {
     const startedAt = new Date().toISOString()
     const details = await Promise.all([

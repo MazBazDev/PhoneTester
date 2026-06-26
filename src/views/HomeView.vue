@@ -8,9 +8,9 @@
       <AppCard class="overflow-hidden">
         <div class="rounded-[24px] bg-slate-950 p-5 text-white">
           <p class="text-xs uppercase tracking-[0.2em] text-orange-300">Premier lot</p>
-          <h2 class="mt-2 text-2xl font-semibold">2 auto-tests reels</h2>
+          <h2 class="mt-2 text-2xl font-semibold">12 tests deja jouables</h2>
           <p class="mt-3 text-sm leading-6 text-slate-300">
-            Informations appareil et permissions, avec resultat persiste localement.
+            Informations appareil, permissions, ecran, tactile, capteurs, boussole, GPS et camera, avec reprise locale.
           </p>
         </div>
         <div class="mt-4 space-y-3">
@@ -27,16 +27,16 @@
 
     <template #actions>
       <AppButton v-if="resumableSession" class="flex-1" variant="secondary" @click="resumeSession">Reprendre</AppButton>
-      <RouterLink class="flex-1" :to="{ name: 'diagnostic-intro' }">
-        <AppButton class="w-full">{{ resumableSession ? 'Nouvelle session' : 'Demarrer un diagnostic' }}</AppButton>
-      </RouterLink>
+      <AppButton class="flex-1" @click="startDiagnostic">
+        {{ resumableSession ? 'Nouvelle session' : 'Demarrer un diagnostic' }}
+      </AppButton>
     </template>
   </AppShell>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import AppButton from '../components/AppButton.vue'
 import AppCard from '../components/AppCard.vue'
 import AppShell from '../components/AppShell.vue'
@@ -67,5 +67,9 @@ const resumeSession = async () => {
       testId: nextStep.testId
     }
   })
+}
+
+const startDiagnostic = async () => {
+  await router.push({ name: 'diagnostic-intro' })
 }
 </script>
