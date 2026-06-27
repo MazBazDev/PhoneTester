@@ -58,7 +58,7 @@
         </AppCard>
 
         <div
-          v-if="!screenImmersiveActive"
+          v-if="showInstructionPanel"
           class="rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3"
         >
           <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -90,7 +90,7 @@
           <p class="mt-2 text-sm leading-6 text-slate-600">{{ step.result.summary }}</p>
         </AppCard>
 
-        <template v-if="testDefinition.mode === 'guided' && guidedState">
+        <template v-if="testDefinition.mode === 'guided' && guidedState && !completionTransitionActive">
           <section
             v-if="props.testId === 'screen' && currentGuidedSubStep && ['active', 'confirm'].includes(guidedState.phase)"
             ref="screenPanelRef"
@@ -100,13 +100,24 @@
           >
             <div
               v-if="screenImmersiveActive"
-              class="px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]"
+              class="pointer-events-none px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]"
             >
-              <div class="inline-flex rounded-full bg-black/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]">
-                {{ guidedState.currentStepIndex + 1 }} / {{ guidedState.steps.length }}
+              <div class="inline-flex items-center flex-col gap-1 rounded-full border border-black/8 bg-black/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] backdrop-blur-sm">
+                <div class="text-center">
+                  {{ guidedState.currentStepIndex + 1 }} / {{ guidedState.steps.length }}
+                </div>
+                <div
+                  v-if="isAnimatedScreenStep"
+                  class="h-1.5 w-16 overflow-hidden rounded-full bg-black/10"
+                >
+                  <div
+                    class="h-full rounded-full bg-current/72 transition-[width] duration-150"
+                    :style="{ width: `${screenAnimationProgress}%` }"
+                  />
+                </div>
               </div>
             </div>
-            <template v-else>
+            <template v-if="!screenImmersiveActive">
               <p class="text-xs font-semibold uppercase tracking-[0.2em] opacity-80">
                 Ecran {{ guidedState.currentStepIndex + 1 }} / {{ guidedState.steps.length }}
               </p>
@@ -119,36 +130,40 @@
               @touchstart.passive="handleScreenProbeTouch"
             />
             <div
-              class="mt-auto grid grid-cols-2 gap-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+              class="mt-auto grid grid-cols-2 gap-2 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
               :class="
                 screenImmersiveActive
-                  ? 'mx-auto w-full max-w-[22rem] bg-transparent'
+                  ? 'mx-auto w-full max-w-[21rem] bg-transparent px-5'
                   : ''
               "
             >
               <AppButton
-                class="w-full"
+                class="w-full whitespace-nowrap"
                 :class="
                   screenImmersiveActive
-                    ? 'min-h-10 rounded-full border-white/20 bg-black/12 px-3 py-2 text-xs font-medium text-current backdrop-blur-sm'
+                    ? `min-h-9 rounded-2xl px-3.5 py-2 text-[10px] font-semibold tracking-[0.02em] shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md ${
+                        currentScreenStepFlagged
+                          ? 'border border-black/20 bg-black/12 text-current'
+                          : 'border border-black/10 bg-white/10 text-current/88'
+                      }`
                     : ''
                 "
                 :variant="screenImmersiveActive ? 'ghost' : 'secondary'"
                 @click="toggleScreenConcern"
               >
-                {{ currentScreenStepFlagged ? 'Doute marque' : 'Marquer un doute' }}
+                {{ currentScreenStepFlagged ? 'Doute note' : 'Signaler un doute' }}
               </AppButton>
               <AppButton
-                class="w-full"
+                class="w-full whitespace-nowrap"
                 :class="
                   screenImmersiveActive
-                    ? 'min-h-10 rounded-full border border-white/20 bg-black/12 px-3 py-2 text-xs font-medium text-current backdrop-blur-sm'
+                    ? 'min-h-9 rounded-2xl border border-black/20 bg-white/16 px-3.5 py-2 text-[10px] font-semibold tracking-[0.02em] text-current shadow-[0_10px_28px_rgba(15,23,42,0.1)] backdrop-blur-md'
                     : ''
                 "
                 :variant="screenImmersiveActive ? 'ghost' : 'primary'"
                 @click="advanceScreenStep"
               >
-                {{ isLastGuidedSubStep ? 'Terminer la sequence' : 'Couleur suivante' }}
+                {{ isLastGuidedSubStep ? 'Terminer' : 'Suivant' }}
               </AppButton>
             </div>
           </section>
@@ -406,6 +421,8 @@ const COMPLETION_DELAY_MS = 700
 const completionTransitionActive = ref(false)
 const completionAnimationSeed = ref(0)
 const completionTransitionSummary = ref('')
+const screenAnimationProgress = ref(0)
+let screenAnimationProgressInterval: ReturnType<typeof window.setInterval> | null = null
 
 const session = computed(() => store.getSessionById(props.sessionId))
 const testDefinition = computed(() => store.getTestDefinition(props.testId))
@@ -548,6 +565,7 @@ const flaggedScreenStepIds = computed(() => {
 const currentScreenStepFlagged = computed(() =>
   Boolean(currentGuidedSubStep.value?.id && flaggedScreenStepIds.value.includes(currentGuidedSubStep.value.id))
 )
+const isAnimatedScreenStep = computed(() => Boolean(currentGuidedSubStep.value?.animationName))
 const isLastGuidedSubStep = computed(() => {
   if (!guidedState.value) {
     return false
@@ -574,13 +592,48 @@ const screenImmersiveActive = computed(
 )
 const screenPanelStyle = computed(() => ({
   backgroundColor: currentGuidedSubStep.value?.color || '#ffffff',
+  backgroundImage: currentGuidedSubStep.value?.backgroundImage,
+  backgroundSize: currentGuidedSubStep.value?.backgroundSize,
+  backgroundPosition: currentGuidedSubStep.value?.backgroundPosition,
+  animationName: currentGuidedSubStep.value?.animationName,
+  animationDuration: currentGuidedSubStep.value?.animationDuration,
+  animationTimingFunction: currentGuidedSubStep.value?.animationTimingFunction,
+  animationIterationCount: currentGuidedSubStep.value?.animationIterationCount,
+  animationDirection: currentGuidedSubStep.value?.animationDirection,
   paddingTop: screenImmersiveActive.value ? '0' : undefined,
   paddingBottom: screenImmersiveActive.value ? '0' : undefined
 }))
+const screenAnimationDurationMs = computed(() => {
+  const raw = currentGuidedSubStep.value?.animationDuration
+
+  if (!raw) {
+    return 0
+  }
+
+  if (raw.endsWith('ms')) {
+    const value = Number.parseFloat(raw)
+    return Number.isFinite(value) ? value : 0
+  }
+
+  if (raw.endsWith('s')) {
+    const value = Number.parseFloat(raw)
+    return Number.isFinite(value) ? value * 1000 : 0
+  }
+
+  const fallback = Number.parseFloat(raw)
+  return Number.isFinite(fallback) ? fallback : 0
+})
 const showCompletionCheck = computed(() =>
   !screenImmersiveActive.value &&
   (completionTransitionActive.value || step.value?.result?.status === 'pass')
 )
+const showInstructionPanel = computed(() => {
+  if (props.testId === 'screen') {
+    return false
+  }
+
+  return !screenImmersiveActive.value && !completionTransitionActive.value && !step.value?.result
+})
 
 const touchRows = computed(() => Number(guidedState.value?.metrics.rows ?? 12))
 const touchCols = computed(() => Number(guidedState.value?.metrics.cols ?? 7))
@@ -1716,7 +1769,34 @@ const quitDiagnostic = async () => {
   await router.push({ name: 'home' })
 }
 
+const stopScreenAnimationProgress = () => {
+  if (screenAnimationProgressInterval) {
+    window.clearInterval(screenAnimationProgressInterval)
+    screenAnimationProgressInterval = null
+  }
+}
+
+const startScreenAnimationProgress = () => {
+  stopScreenAnimationProgress()
+
+  if (!screenImmersiveActive.value || !isAnimatedScreenStep.value || screenAnimationDurationMs.value <= 0) {
+    screenAnimationProgress.value = 0
+    return
+  }
+
+  const startedAt = Date.now()
+  const duration = screenAnimationDurationMs.value
+  const update = () => {
+    const elapsed = (Date.now() - startedAt) % duration
+    screenAnimationProgress.value = Math.min(100, (elapsed / duration) * 100)
+  }
+
+  update()
+  screenAnimationProgressInterval = window.setInterval(update, 120)
+}
+
 onBeforeUnmount(() => {
+  stopScreenAnimationProgress()
   stopActiveRuntimes()
   syncImmersiveScreenChrome()
 })
@@ -1741,6 +1821,14 @@ watch(
   [screenImmersiveActive, currentGuidedSubStep],
   () => {
     syncImmersiveScreenChrome()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => [screenImmersiveActive.value, currentGuidedSubStep.value?.id, currentGuidedSubStep.value?.animationName, currentGuidedSubStep.value?.animationDuration] as const,
+  () => {
+    startScreenAnimationProgress()
   },
   { immediate: true }
 )

@@ -306,6 +306,7 @@ describe('DiagnosticAutoTestView', () => {
   })
 
   it('shows an intro before launching the fullscreen screen test, then advances directly', async () => {
+    vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -343,26 +344,28 @@ describe('DiagnosticAutoTestView', () => {
     })
 
     expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.phase).toBe('idle')
-    expect(wrapper.text()).toContain('Verifier les couleurs en plein ecran')
     expect(wrapper.text()).toContain('Lancer le test')
     expect(wrapper.find('[data-testid="phone-preview-screen-intro"]').exists()).toBe(true)
 
     await wrapper.findAll('button').find((button) => button.text() === 'Lancer le test')?.trigger('click')
     await nextTick()
 
-    expect(wrapper.text()).toContain('Marquer un doute')
-    expect(wrapper.text()).toContain('Couleur suivante')
+    expect(wrapper.text()).toContain('Signaler un doute')
+    expect(wrapper.text()).toContain('Suivant')
 
-    for (let index = 0; index < 5; index += 1) {
-      await wrapper.findAll('button').find((button) => button.text() === 'Couleur suivante')?.trigger('click')
+    for (let index = 0; index < 7; index += 1) {
+      await wrapper.findAll('button').find((button) => button.text() === 'Suivant')?.trigger('click')
       await nextTick()
     }
 
-    await wrapper.findAll('button').find((button) => button.text() === 'Terminer la sequence')?.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === 'Terminer')?.trigger('click')
+    await nextTick()
+    await vi.runAllTimersAsync()
     await nextTick()
 
     expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.phase).toBe('completed')
     expect(store.getStepByTestId(session.id, 'screen')?.result?.status).toBe('pass')
+    vi.useRealTimers()
   })
 
   it('secures quitting behind a confirmation dialog', async () => {
@@ -509,6 +512,7 @@ describe('DiagnosticAutoTestView', () => {
   })
 
   it('finalizes rotation after portrait and landscape are observed', async () => {
+    vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -569,11 +573,15 @@ describe('DiagnosticAutoTestView', () => {
     window.dispatchEvent(new Event('resize'))
     await nextTick()
     await nextTick()
+    await vi.runAllTimersAsync()
+    await nextTick()
 
     expect(store.getStepByTestId(session.id, 'rotation')?.result?.status).toBe('pass')
+    vi.useRealTimers()
   })
 
   it('finalizes accelerometer after four tilt directions are observed', async () => {
+    vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -646,11 +654,15 @@ describe('DiagnosticAutoTestView', () => {
     deviceMotionHandler?.({ accelerationIncludingGravity: { x: 0, y: 3, z: 9 } } as unknown as Event)
     await nextTick()
     await nextTick()
+    await vi.runAllTimersAsync()
+    await nextTick()
 
     expect(store.getStepByTestId(session.id, 'accelerometer')?.result?.status).toBe('pass')
+    vi.useRealTimers()
   })
 
   it('finalizes gyroscope after three axes are observed', async () => {
+    vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -722,8 +734,11 @@ describe('DiagnosticAutoTestView', () => {
     deviceMotionHandler?.({ rotationRate: { alpha: 0, beta: 0, gamma: 20 } } as unknown as Event)
     await nextTick()
     await nextTick()
+    await vi.runAllTimersAsync()
+    await nextTick()
 
     expect(store.getStepByTestId(session.id, 'gyroscope')?.result?.status).toBe('pass')
+    vi.useRealTimers()
   })
 
   it('keeps the microphone test active after sound detection and exposes the waveform', async () => {
@@ -812,6 +827,7 @@ describe('DiagnosticAutoTestView', () => {
   })
 
   it('finalizes the microphone test directly when the user clicks continuer', async () => {
+    vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -894,9 +910,12 @@ describe('DiagnosticAutoTestView', () => {
 
     await wrapper.findAll('button').find((button) => button.text() === 'Continuer')?.trigger('click')
     await nextTick()
+    await vi.runAllTimersAsync()
+    await nextTick()
 
     expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('completed')
-    expect(store.getStepByTestId(session.id, 'microphone')?.result?.status).toBe('pass')
+    expect(store.getStepByTestId(session.id, 'microphone')?.result?.status).toBe('warning')
+    vi.useRealTimers()
   })
 
 })

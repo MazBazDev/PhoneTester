@@ -53,3 +53,36 @@ select {
   min-height: 100vh;
   background: var(--color-page);
 }
+
+@keyframes screen-color-shift {
+  0% {
+    background-color: #dc2626;
+  }
+  16% {
+    background-color: #f97316;
+  }
+  32% {
+    background-color: #eab308;
+  }
+  48% {
+    background-color: #22c55e;
+  }
+  64% {
+    background-color: #06b6d4;
+  }
+  82% {
+    background-color: #2563eb;
+  }
+  100% {
+    background-color: #7c3aed;
+  }
+}
+
+@keyframes screen-dark-shift {
+  0% {
+    background-color: #ffffff;
+  }
+  100% {
+    background-color: #000000;
+  }
+}

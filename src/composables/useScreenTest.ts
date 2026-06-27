@@ -48,6 +48,30 @@ const screenSteps = [
     instruction: 'Cherche les bandings, halos ou differences de teinte.',
     color: '#94a3b8',
     tone: 'text-slate-950'
+  },
+  {
+    id: 'color-gradient',
+    label: 'Degrade couleurs',
+    instruction: 'Observe le passage progressif d’une couleur a l’autre. La transition doit rester fluide sur tout l’ecran.',
+    color: '#7c3aed',
+    tone: 'text-white',
+    animationName: 'screen-color-shift',
+    animationDuration: '18s',
+    animationTimingFunction: 'linear',
+    animationIterationCount: 'infinite',
+    animationDirection: 'alternate'
+  },
+  {
+    id: 'dark-gradient',
+    label: 'Nuances noir blanc',
+    instruction: 'Observe le passage continu du blanc vers le noir. La transition doit rester fluide, sans marche visible.',
+    color: '#ffffff',
+    tone: 'text-slate-950',
+    animationName: 'screen-dark-shift',
+    animationDuration: '28s',
+    animationTimingFunction: 'linear',
+    animationIterationCount: 'infinite',
+    animationDirection: 'alternate'
   }
 ] as const
 
@@ -80,7 +104,7 @@ const buildStatus = (state: DiagnosticGuidedState): TestStatus => {
 export const useScreenTest = (): DiagnosticTestDefinition => ({
   id: 'screen',
   name: 'Ecran',
-  description: 'Affiche 6 couleurs plein cadre et enregistre un verdict utilisateur simple.',
+  description: 'Affiche des aplats et des degrades plein cadre pour verifier rapidement la dalle.',
   icon: 'palette',
   mode: 'guided',
   immersive: true,
@@ -107,8 +131,8 @@ export const useScreenTest = (): DiagnosticTestDefinition => ({
       status,
       summary:
         defectCount === 0 && state.userVerdict !== 'warning'
-          ? 'Aucun defaut visuel n’a ete signale sur les 6 couleurs.'
-          : `${defectCount} couleur(s) ont revele un doute ou un defaut visuel.`,
+          ? 'Aucun defaut visuel n’a ete signale sur les aplats et degrades affiches.'
+          : `${defectCount} ecran(s) de verification ont revele un doute ou un defaut visuel.`,
       details: buildDetails(state),
       startedAt: state.startedAt ?? new Date().toISOString(),
       finishedAt: new Date().toISOString()

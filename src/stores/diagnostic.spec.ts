@@ -17,7 +17,7 @@ describe('diagnostic store', () => {
 
     expect(session.id).toBe('session-1')
     expect(session.steps).toHaveLength(10)
-    expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.steps).toHaveLength(6)
+    expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.steps).toHaveLength(8)
     expect(JSON.parse(localStorage.getItem('phone-tester.active-session') || '{}').id).toBe('session-1')
   })
 
@@ -82,6 +82,8 @@ describe('diagnostic store', () => {
     const session = store.startSession()
 
     store.startGuidedTest(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
     store.completeGuidedStep(session.id, 'screen')
     store.completeGuidedStep(session.id, 'screen')
     store.completeGuidedStep(session.id, 'screen')
@@ -227,6 +229,8 @@ describe('diagnostic store', () => {
     const session = store.startSession()
 
     store.startGuidedTest(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
     store.completeGuidedStep(session.id, 'screen')
     store.completeGuidedStep(session.id, 'screen')
     store.completeGuidedStep(session.id, 'screen')

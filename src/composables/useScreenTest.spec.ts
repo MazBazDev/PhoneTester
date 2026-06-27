@@ -21,6 +21,6 @@ describe('useScreenTest', () => {
     const result = definition.finalizeGuidedResult(state)
 
     expect(result.status).toBe('warning')
-    expect(result.details).toHaveLength(6)
+    expect(result.details).toHaveLength(8)
   })
 })

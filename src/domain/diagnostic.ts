@@ -36,6 +36,14 @@ export interface DiagnosticGuidedSubStepState {
   response: 'yes' | 'no' | null
   tone?: string
   color?: string
+  backgroundImage?: string
+  backgroundSize?: string
+  backgroundPosition?: string
+  animationName?: string
+  animationDuration?: string
+  animationTimingFunction?: string
+  animationIterationCount?: string
+  animationDirection?: string
 }
 
 export interface DiagnosticGuidedState {
