@@ -36,15 +36,15 @@
         <div class="space-y-3">
           <div class="flex items-start gap-3">
             <span class="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-950" />
-            <p class="text-sm leading-6 text-slate-700">Tu suis simplement les consignes a l’ecran.</p>
+            <p class="text-sm leading-6 text-slate-700">Des verifications guidees, une par une.</p>
           </div>
           <div class="flex items-start gap-3">
             <span class="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-950" />
-            <p class="text-sm leading-6 text-slate-700">Aucun jargon technique, seulement l’essentiel pour acheter sereinement.</p>
+            <p class="text-sm leading-6 text-slate-700">Un resultat simple pour voir vite si quelque chose cloche.</p>
           </div>
           <div class="flex items-start gap-3">
             <span class="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-950" />
-            <p class="text-sm leading-6 text-slate-700">Le diagnostic reste sur le telephone.</p>
+            <p class="text-sm leading-6 text-slate-700">Aucune competence technique necessaire.</p>
           </div>
         </div>
       </AppCard>

@@ -345,6 +345,7 @@ describe('DiagnosticAutoTestView', () => {
     expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.phase).toBe('idle')
     expect(wrapper.text()).toContain('Verifier les couleurs en plein ecran')
     expect(wrapper.text()).toContain('Lancer le test')
+    expect(wrapper.find('[data-testid="phone-preview-screen-intro"]').exists()).toBe(true)
 
     await wrapper.findAll('button').find((button) => button.text() === 'Lancer le test')?.trigger('click')
     await nextTick()
@@ -452,6 +453,7 @@ describe('DiagnosticAutoTestView', () => {
 
     expect(wrapper.text()).toContain('Verifier toute la surface tactile')
     expect(wrapper.text()).toContain('Lancer le test')
+    expect(wrapper.find('[data-testid="phone-preview-touch-intro"]').exists()).toBe(true)
 
     await wrapper.findAll('button').find((button) => button.text() === 'Lancer le test')?.trigger('click')
     await nextTick()
@@ -554,6 +556,7 @@ describe('DiagnosticAutoTestView', () => {
 
     expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('active')
     expect(wrapper.text()).toContain('Portrait')
+    expect(wrapper.find('[data-testid="phone-preview-rotation"]').exists()).toBe(true)
 
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,

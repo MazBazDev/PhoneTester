@@ -68,6 +68,14 @@
           <p class="mt-2 text-sm leading-6 text-slate-600">{{ instructionText }}</p>
         </div>
 
+        <section v-if="guidedState?.phase === 'idle' && props.testId === 'screen'">
+          <PhonePreviewPanel mode="screen-intro" />
+        </section>
+
+        <section v-if="guidedState?.phase === 'idle' && props.testId === 'touch'">
+          <PhonePreviewPanel mode="touch-intro" />
+        </section>
+
         <template v-if="testDefinition.mode === 'guided' && guidedState">
           <section
             v-if="props.testId === 'screen' && currentGuidedSubStep && ['active', 'confirm'].includes(guidedState.phase)"
@@ -155,149 +163,28 @@
           </section>
 
           <section v-else-if="isRotationTest && guidedState.phase === 'active'">
-            <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-              <div class="flex justify-center">
-                <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
-                  <div
-                    class="rounded-[22px] border border-stone-300 bg-white transition-all duration-300"
-                    :class="rotationHasLandscape ? 'h-28 w-44' : 'h-44 w-28'"
-                  />
-                </div>
-              </div>
-              <div class="mt-5 grid grid-cols-2 gap-3">
-                <div
-                  class="flex items-center justify-between rounded-[18px] border px-4 py-3 text-sm font-medium transition-colors"
-                  :class="
-                    rotationHasPortrait
-                      ? 'border-slate-950/15 bg-white text-slate-950'
-                      : 'border-stone-300 bg-stone-100 text-slate-500'
-                  "
-                >
-                  <span>Portrait</span>
-                  <span
-                    class="flex h-6 w-6 items-center justify-center rounded-full border transition-colors"
-                    :class="
-                      rotationHasPortrait
-                        ? 'border-slate-950 bg-slate-950 text-white'
-                        : 'border-stone-300 bg-white text-transparent'
-                    "
-                  >
-                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" class="h-3.5 w-3.5">
-                      <path
-                        d="M3.5 8.5L6.5 11.5L12.5 5.5"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </span>
-                </div>
-                <div
-                  class="flex items-center justify-between rounded-[18px] border px-4 py-3 text-sm font-medium transition-colors"
-                  :class="
-                    rotationHasLandscape
-                      ? 'border-slate-950/15 bg-white text-slate-950'
-                      : 'border-stone-300 bg-stone-100 text-slate-500'
-                  "
-                >
-                  <span>Paysage</span>
-                  <span
-                    class="flex h-6 w-6 items-center justify-center rounded-full border transition-colors"
-                    :class="
-                      rotationHasLandscape
-                        ? 'border-slate-950 bg-slate-950 text-white'
-                        : 'border-stone-300 bg-white text-transparent'
-                    "
-                  >
-                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" class="h-3.5 w-3.5">
-                      <path
-                        d="M3.5 8.5L6.5 11.5L12.5 5.5"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </span>
-                </div>
-              </div>
-            </div>
+            <PhonePreviewPanel
+              mode="rotation"
+              :orientation="rotationHasLandscape ? 'landscape' : 'portrait'"
+              :validated-states="rotationValidatedStates"
+              :active-state="rotationActiveState"
+            />
           </section>
 
           <section v-else-if="isAccelerometerTest && guidedState.phase === 'active'">
-            <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-              <div class="flex justify-center">
-                <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
-                  <div
-                    class="h-40 w-28 rounded-[22px] border border-stone-300 bg-white transition-transform duration-300"
-                    :style="{
-                      transform:
-                        accelerometerCurrentTilt === 'left'
-                          ? 'rotate(-10deg) translateX(-10px)'
-                          : accelerometerCurrentTilt === 'right'
-                            ? 'rotate(10deg) translateX(10px)'
-                            : accelerometerCurrentTilt === 'up'
-                              ? 'translateY(-10px)'
-                              : accelerometerCurrentTilt === 'down'
-                                ? 'translateY(10px)'
-                                : 'translateY(0)'
-                    }"
-                  />
-                </div>
-              </div>
-              <div class="mt-5 grid grid-cols-2 gap-3">
-                <div
-                  v-for="direction in [
-                    { key: 'up', label: 'Haut' },
-                    { key: 'down', label: 'Bas' },
-                    { key: 'left', label: 'Gauche' },
-                    { key: 'right', label: 'Droite' }
-                  ]"
-                  :key="direction.key"
-                  class="rounded-[18px] px-4 py-3 text-sm font-medium"
-                  :class="accelerometerObservedTilts.includes(direction.key) ? 'bg-emerald-50 text-emerald-900' : 'bg-stone-100 text-slate-600'"
-                >
-                  {{ direction.label }}
-                </div>
-              </div>
-            </div>
+            <PhonePreviewPanel
+              mode="tilt"
+              :validated-states="accelerometerValidatedStates"
+              :active-state="accelerometerActiveState"
+            />
           </section>
 
           <section v-else-if="isGyroscopeTest && guidedState.phase === 'active'">
-            <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-              <div class="flex justify-center">
-                <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
-                  <div
-                    class="h-40 w-28 rounded-[22px] border border-stone-300 bg-white transition-transform duration-300"
-                    :style="{
-                      transform:
-                        gyroscopeCurrentAxis === 'alpha'
-                          ? 'rotate(14deg)'
-                          : gyroscopeCurrentAxis === 'beta'
-                            ? 'rotateX(24deg)'
-                            : gyroscopeCurrentAxis === 'gamma'
-                              ? 'rotateY(24deg)'
-                              : 'rotate(0deg)'
-                    }"
-                  />
-                </div>
-              </div>
-              <div class="mt-5 grid grid-cols-3 gap-3">
-                <div
-                  v-for="axis in [
-                    { key: 'alpha', label: 'Alpha' },
-                    { key: 'beta', label: 'Beta' },
-                    { key: 'gamma', label: 'Gamma' }
-                  ]"
-                  :key="axis.key"
-                  class="rounded-[18px] px-4 py-3 text-sm font-medium"
-                  :class="gyroscopeObservedAxes.includes(axis.key) ? 'bg-emerald-50 text-emerald-900' : 'bg-stone-100 text-slate-600'"
-                >
-                  {{ axis.label }}
-                </div>
-              </div>
-            </div>
+            <PhonePreviewPanel
+              mode="gyro"
+              :validated-states="gyroscopeValidatedStates"
+              :active-state="gyroscopeActiveState"
+            />
           </section>
 
           <section v-else-if="isSensorTest && guidedState.phase === 'active'">
@@ -424,6 +311,7 @@ import AppShell from '../components/AppShell.vue'
 import CameraLivePanel from '../components/CameraLivePanel.vue'
 import MicrophoneLivePanel from '../components/MicrophoneLivePanel.vue'
 import MultitouchPadPanel from '../components/MultitouchPadPanel.vue'
+import PhonePreviewPanel from '../components/PhonePreviewPanel.vue'
 import SensorLivePanel from '../components/SensorLivePanel.vue'
 import TouchGridPanel from '../components/TouchGridPanel.vue'
 import { useCameraMedia, type CameraDeviceInfo } from '../composables/useCameraMedia'
@@ -614,19 +502,48 @@ const rotationObservedOrientations = computed(() => {
 })
 const rotationHasPortrait = computed(() => rotationObservedOrientations.value.includes('portrait'))
 const rotationHasLandscape = computed(() => rotationObservedOrientations.value.includes('landscape'))
-const rotationUiReady = computed(() => rotationHasPortrait.value && rotationHasLandscape.value)
+const rotationValidatedStates = computed(() =>
+  rotationObservedOrientations.value.filter((value): value is 'portrait' | 'landscape' =>
+    value === 'portrait' || value === 'landscape'
+  )
+)
+const rotationActiveState = computed<'portrait' | 'landscape'>(() =>
+  rotationHasLandscape.value ? 'landscape' : 'portrait'
+)
 const accelerometerCurrentTilt = computed(() => String(guidedState.value?.metrics.currentTilt ?? 'none'))
 const accelerometerObservedTilts = computed(() => {
   const value = guidedState.value?.metrics.observedTilts
   return Array.isArray(value) ? value : []
 })
-const accelerometerTiltReady = computed(() => ['left', 'right', 'up', 'down'].every((direction) => accelerometerObservedTilts.value.includes(direction)))
+const accelerometerValidatedStates = computed(() =>
+  accelerometerObservedTilts.value.filter((value): value is 'up' | 'down' | 'left' | 'right' =>
+    value === 'up' || value === 'down' || value === 'left' || value === 'right'
+  )
+)
+const accelerometerActiveState = computed<'up' | 'down' | 'left' | 'right' | null>(() => {
+  if (accelerometerCurrentTilt.value === 'up' || accelerometerCurrentTilt.value === 'down' || accelerometerCurrentTilt.value === 'left' || accelerometerCurrentTilt.value === 'right') {
+    return accelerometerCurrentTilt.value
+  }
+
+  return null
+})
 const gyroscopeCurrentAxis = computed(() => String(guidedState.value?.metrics.currentAxis ?? 'none'))
 const gyroscopeObservedAxes = computed(() => {
   const value = guidedState.value?.metrics.observedAxes
   return Array.isArray(value) ? value : []
 })
-const gyroscopeAxesReady = computed(() => ['alpha', 'beta', 'gamma'].every((axis) => gyroscopeObservedAxes.value.includes(axis)))
+const gyroscopeValidatedStates = computed(() =>
+  gyroscopeObservedAxes.value.filter((value): value is 'alpha' | 'beta' | 'gamma' =>
+    value === 'alpha' || value === 'beta' || value === 'gamma'
+  )
+)
+const gyroscopeActiveState = computed<'alpha' | 'beta' | 'gamma' | null>(() => {
+  if (gyroscopeCurrentAxis.value === 'alpha' || gyroscopeCurrentAxis.value === 'beta' || gyroscopeCurrentAxis.value === 'gamma') {
+    return gyroscopeCurrentAxis.value
+  }
+
+  return null
+})
 const microphoneLevel = computed(() => Number(guidedState.value?.metrics.level ?? microphoneRuntime.level.value))
 const microphonePeakLevel = computed(() => Number(guidedState.value?.metrics.peakLevel ?? microphoneRuntime.peakLevel.value))
 const microphoneSoundDetected = computed(() => Boolean(guidedState.value?.metrics.soundDetected))
