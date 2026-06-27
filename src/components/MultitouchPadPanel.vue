@@ -13,7 +13,7 @@
   >
     <div class="mb-4 flex items-center justify-between gap-3">
       <p class="text-sm text-slate-600">{{ hint }}</p>
-      <span class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-slate-700">
+      <span class="shrink-0 whitespace-nowrap rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-slate-700">
         {{ maxTouches }} max
       </span>
     </div>

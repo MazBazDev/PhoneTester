@@ -165,11 +165,61 @@
                 </div>
               </div>
               <div class="mt-5 grid grid-cols-2 gap-3">
-                <div class="rounded-[18px] px-4 py-3" :class="rotationHasPortrait ? 'bg-emerald-50 text-emerald-900' : 'bg-stone-100 text-slate-600'">
-                  Portrait
+                <div
+                  class="flex items-center justify-between rounded-[18px] border px-4 py-3 text-sm font-medium transition-colors"
+                  :class="
+                    rotationHasPortrait
+                      ? 'border-slate-950/15 bg-white text-slate-950'
+                      : 'border-stone-300 bg-stone-100 text-slate-500'
+                  "
+                >
+                  <span>Portrait</span>
+                  <span
+                    class="flex h-6 w-6 items-center justify-center rounded-full border transition-colors"
+                    :class="
+                      rotationHasPortrait
+                        ? 'border-slate-950 bg-slate-950 text-white'
+                        : 'border-stone-300 bg-white text-transparent'
+                    "
+                  >
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" class="h-3.5 w-3.5">
+                      <path
+                        d="M3.5 8.5L6.5 11.5L12.5 5.5"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
                 </div>
-                <div class="rounded-[18px] px-4 py-3" :class="rotationHasLandscape ? 'bg-emerald-50 text-emerald-900' : 'bg-stone-100 text-slate-600'">
-                  Paysage
+                <div
+                  class="flex items-center justify-between rounded-[18px] border px-4 py-3 text-sm font-medium transition-colors"
+                  :class="
+                    rotationHasLandscape
+                      ? 'border-slate-950/15 bg-white text-slate-950'
+                      : 'border-stone-300 bg-stone-100 text-slate-500'
+                  "
+                >
+                  <span>Paysage</span>
+                  <span
+                    class="flex h-6 w-6 items-center justify-center rounded-full border transition-colors"
+                    :class="
+                      rotationHasLandscape
+                        ? 'border-slate-950 bg-slate-950 text-white'
+                        : 'border-stone-300 bg-white text-transparent'
+                    "
+                  >
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" class="h-3.5 w-3.5">
+                      <path
+                        d="M3.5 8.5L6.5 11.5L12.5 5.5"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
                 </div>
               </div>
             </div>
