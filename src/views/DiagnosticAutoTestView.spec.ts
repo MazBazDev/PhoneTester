@@ -99,7 +99,7 @@ describe('DiagnosticAutoTestView', () => {
 
     await nextTick()
     expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('active')
-    expect(wrapper.text()).toContain('Fais basculer l’interface')
+    expect(wrapper.text()).toContain("Tourne le telephone pour faire apparaitre portrait et paysage.")
   })
 
   it('auto-starts the accelerometer test on entry', async () => {
@@ -493,8 +493,8 @@ describe('DiagnosticAutoTestView', () => {
     })
 
     expect(wrapper.text()).toContain('Multitouch')
-    expect(wrapper.text()).toContain('0 actif')
-    expect(wrapper.text()).toContain('Maximum')
+    expect(wrapper.text()).toContain('0 max')
+    expect(wrapper.text()).toContain('Pose 2 puis 3 doigts ensemble.')
   })
 
   it('finalizes rotation after portrait and landscape are observed', async () => {
@@ -794,9 +794,8 @@ describe('DiagnosticAutoTestView', () => {
     await nextTick()
 
     expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('active')
-    expect(wrapper.text()).toContain('Fais monter le signal audio')
-    expect(wrapper.text()).toContain('Relancer le micro')
-    expect(wrapper.text()).toContain('detecte')
+    expect(wrapper.text()).toContain('Parle ou tapote pres du micro')
+    expect(wrapper.text()).toContain('Detecte')
     expect(wrapper.find('[data-testid="microphone-waveform"]').exists()).toBe(true)
   })
 

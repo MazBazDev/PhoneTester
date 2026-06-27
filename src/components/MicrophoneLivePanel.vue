@@ -1,41 +1,34 @@
 <template>
-  <div class="space-y-4">
-    <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Microphone</p>
-      <p class="mt-1 text-sm text-slate-600">{{ hint }}</p>
+  <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
+    <div class="flex items-center justify-between gap-4">
+      <p class="text-sm text-slate-600">{{ hint }}</p>
+      <p class="shrink-0 text-sm font-semibold text-slate-950">{{ soundDetected ? 'Detecte' : 'En ecoute' }}</p>
     </div>
-
-    <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
-      <div class="flex items-center justify-between gap-4">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Signal live</p>
-        <p class="text-sm font-semibold text-slate-950">{{ soundDetected ? 'detecte' : 'en ecoute' }}</p>
-      </div>
-      <div class="mt-4 overflow-hidden rounded-[20px] border border-stone-300/80 bg-stone-100/80 px-3 py-4">
-        <svg
-          viewBox="0 0 100 32"
-          preserveAspectRatio="none"
-          class="h-28 w-full"
-          role="img"
-          aria-label="Waveform microphone"
-        >
-          <path d="M0 16 H100" class="stroke-stone-300" stroke-width="1" fill="none" />
-          <polyline
-            data-testid="microphone-waveform"
-            :points="waveformPoints"
-            class="fill-none stroke-slate-950"
-            stroke-width="1.75"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </div>
-      <div class="mt-4 h-2 overflow-hidden rounded-full bg-stone-300/80">
-        <div class="h-full rounded-full bg-slate-950 transition-all duration-100" :style="{ width: `${Math.max(4, levelPercent)}%` }" />
-      </div>
-      <p class="mt-4 text-sm font-medium" :class="soundDetected ? 'text-emerald-700' : 'text-slate-600'">
-        {{ soundDetected ? 'Un son a bien ete detecte.' : 'Parle ou souffle pour faire monter le niveau.' }}
-      </p>
+    <div class="mt-4 overflow-hidden rounded-[20px] border border-stone-300/80 bg-stone-100/80 px-3 py-4">
+      <svg
+        viewBox="0 0 100 32"
+        preserveAspectRatio="none"
+        class="h-28 w-full"
+        role="img"
+        aria-label="Waveform microphone"
+      >
+        <path d="M0 16 H100" class="stroke-stone-300" stroke-width="1" fill="none" />
+        <polyline
+          data-testid="microphone-waveform"
+          :points="waveformPoints"
+          class="fill-none stroke-slate-950"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
     </div>
+    <div class="mt-4 h-2 overflow-hidden rounded-full bg-stone-300/80">
+      <div class="h-full rounded-full bg-slate-950 transition-all duration-100" :style="{ width: `${Math.max(4, levelPercent)}%` }" />
+    </div>
+    <p class="mt-4 text-sm font-medium" :class="soundDetected ? 'text-emerald-700' : 'text-slate-600'">
+      {{ soundDetected ? 'Un son a bien ete detecte.' : 'Parle ou souffle pour faire monter le niveau.' }}
+    </p>
   </div>
 </template>
 

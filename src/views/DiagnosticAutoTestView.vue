@@ -61,20 +61,14 @@
           v-if="!screenImmersiveActive"
           class="rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3"
         >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                En cours
-              </p>
-              <p class="mt-1 truncate text-sm text-slate-700">{{ helperText }}</p>
-              <p v-if="visibleSubStepLabel" class="mt-2 text-xs text-slate-500">
-                {{ visibleSubStepLabel }}
-              </p>
-            </div>
-            <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="badgeClass">
-              {{ badgeLabel }}
-            </span>
-          </div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            {{ instructionEyebrow }}
+          </p>
+          <p class="mt-2 text-base font-semibold text-slate-950">{{ instructionTitle }}</p>
+          <p class="mt-2 text-sm leading-6 text-slate-600">{{ instructionText }}</p>
+          <p v-if="visibleSubStepLabel" class="mt-3 text-xs text-slate-500">
+            {{ visibleSubStepLabel }}
+          </p>
         </div>
 
         <template v-if="testDefinition.mode === 'guided' && guidedState">
@@ -142,22 +136,15 @@
 
           <section
             v-else-if="props.testId === 'touch' && guidedState.phase === 'active'"
-            class="rounded-[32px] bg-slate-50/90 p-6"
+            class="rounded-[32px] bg-slate-50/90 p-4"
           >
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Grille tactile</p>
-            <h2 class="mt-3 text-2xl font-bold text-slate-950">Couvre toute la surface</h2>
-            <p class="mt-3 text-sm leading-6 text-slate-600">
-              Passe sur chaque case. En secours, 5 taps rapides terminent le test.
-            </p>
-            <div class="mt-5">
-              <TouchGridPanel
-                :cols="touchCols"
-                :rows="touchRows"
-                :visited-cell-ids="touchVisitedCellIds"
-                @track="trackTouchGrid"
-                @tap="trackTouchTap"
-              />
-            </div>
+            <TouchGridPanel
+              :cols="touchCols"
+              :rows="touchRows"
+              :visited-cell-ids="touchVisitedCellIds"
+              @track="trackTouchGrid"
+              @tap="trackTouchTap"
+            />
           </section>
 
           <section v-else-if="isMultitouchTest && guidedState.phase === 'active'">
@@ -170,183 +157,97 @@
             />
           </section>
 
-          <section v-else-if="isRotationTest && guidedState.phase === 'active'" class="space-y-4">
+          <section v-else-if="isRotationTest && guidedState.phase === 'active'">
             <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Rotation UI</p>
-              <h2 class="mt-2 text-2xl font-bold text-slate-950">Fais basculer l’interface</h2>
-              <p class="mt-2 text-sm leading-6 text-slate-600">
-                Tourne le telephone librement. Le test avance seul des qu’une vue portrait et une vue paysage ont ete observees.
-              </p>
-            </div>
-
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr]">
-              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Progression</p>
-                <div class="mt-4 grid grid-cols-2 gap-3">
-                  <div class="rounded-[20px] border px-4 py-4" :class="rotationHasPortrait ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'">
-                    <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="rotationHasPortrait ? 'text-emerald-700' : 'text-slate-500'">Portrait</p>
-                    <p class="mt-2 text-sm font-medium" :class="rotationHasPortrait ? 'text-emerald-900' : 'text-slate-700'">
-                      {{ rotationHasPortrait ? 'OK' : 'A faire' }}
-                    </p>
-                  </div>
-                  <div class="rounded-[20px] border px-4 py-4" :class="rotationHasLandscape ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'">
-                    <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="rotationHasLandscape ? 'text-emerald-700' : 'text-slate-500'">Paysage</p>
-                    <p class="mt-2 text-sm font-medium" :class="rotationHasLandscape ? 'text-emerald-900' : 'text-slate-700'">
-                      {{ rotationHasLandscape ? 'OK' : 'A faire' }}
-                    </p>
-                  </div>
+              <div class="flex justify-center">
+                <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
+                  <div
+                    class="rounded-[22px] border border-stone-300 bg-white transition-all duration-300"
+                    :class="rotationHasLandscape ? 'h-28 w-44' : 'h-44 w-28'"
+                  />
                 </div>
-                <p class="mt-4 text-sm text-slate-600">
-                  {{ rotationUiReady ? 'Les deux positions ont bien ete vues.' : 'Fais encore pivoter le telephone pour valider les deux positions.' }}
-                </p>
               </div>
-
-              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Repere visuel</p>
-                <div class="mt-5 flex justify-center">
-                  <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
-                    <div
-                      class="rounded-[22px] border border-stone-300 bg-white transition-all duration-300"
-                      :class="rotationHasLandscape ? 'h-28 w-44' : 'h-44 w-28'"
-                    />
-                  </div>
+              <div class="mt-5 grid grid-cols-2 gap-3">
+                <div class="rounded-[18px] px-4 py-3" :class="rotationHasPortrait ? 'bg-emerald-50 text-emerald-900' : 'bg-stone-100 text-slate-600'">
+                  Portrait
+                </div>
+                <div class="rounded-[18px] px-4 py-3" :class="rotationHasLandscape ? 'bg-emerald-50 text-emerald-900' : 'bg-stone-100 text-slate-600'">
+                  Paysage
                 </div>
               </div>
             </div>
           </section>
 
-          <section v-else-if="isAccelerometerTest && guidedState.phase === 'active'" class="space-y-4">
+          <section v-else-if="isAccelerometerTest && guidedState.phase === 'active'">
             <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Inclinaison</p>
-              <h2 class="mt-2 text-2xl font-bold text-slate-950">Incline le telephone a plat</h2>
-              <p class="mt-2 text-sm leading-6 text-slate-600">
-                Garde le telephone face a toi puis penche-le a gauche, a droite, vers le haut et vers le bas.
-              </p>
-              <p class="mt-3 text-sm font-medium" :class="sensorPermissionState === 'denied' ? 'text-amber-700' : 'text-slate-700'">
-                {{
-                  sensorPermissionState === 'denied'
-                    ? 'Le mouvement n’est pas accessible. Tu pourras tout de meme donner ton ressenti.'
-                    : 'Continue jusqu’a voir les quatre directions passer au vert.'
-                }}
-              </p>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div
-                v-for="direction in [
-                  { key: 'up', label: 'Haut' },
-                  { key: 'down', label: 'Bas' },
-                  { key: 'left', label: 'Gauche' },
-                  { key: 'right', label: 'Droite' }
-                ]"
-                :key="direction.key"
-                class="rounded-[20px] border px-4 py-4"
-                :class="accelerometerObservedTilts.includes(direction.key) ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'"
-              >
-                <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="accelerometerObservedTilts.includes(direction.key) ? 'text-emerald-700' : 'text-slate-500'">
+              <div class="flex justify-center">
+                <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
+                  <div
+                    class="h-40 w-28 rounded-[22px] border border-stone-300 bg-white transition-transform duration-300"
+                    :style="{
+                      transform:
+                        accelerometerCurrentTilt === 'left'
+                          ? 'rotate(-10deg) translateX(-10px)'
+                          : accelerometerCurrentTilt === 'right'
+                            ? 'rotate(10deg) translateX(10px)'
+                            : accelerometerCurrentTilt === 'up'
+                              ? 'translateY(-10px)'
+                              : accelerometerCurrentTilt === 'down'
+                                ? 'translateY(10px)'
+                                : 'translateY(0)'
+                    }"
+                  />
+                </div>
+              </div>
+              <div class="mt-5 grid grid-cols-2 gap-3">
+                <div
+                  v-for="direction in [
+                    { key: 'up', label: 'Haut' },
+                    { key: 'down', label: 'Bas' },
+                    { key: 'left', label: 'Gauche' },
+                    { key: 'right', label: 'Droite' }
+                  ]"
+                  :key="direction.key"
+                  class="rounded-[18px] px-4 py-3 text-sm font-medium"
+                  :class="accelerometerObservedTilts.includes(direction.key) ? 'bg-emerald-50 text-emerald-900' : 'bg-stone-100 text-slate-600'"
+                >
                   {{ direction.label }}
-                </p>
-                <p class="mt-2 text-sm font-medium" :class="accelerometerObservedTilts.includes(direction.key) ? 'text-emerald-900' : 'text-slate-700'">
-                  {{ accelerometerObservedTilts.includes(direction.key) ? 'Observee' : 'En attente' }}
-                </p>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr]">
-              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Progression</p>
-                <p class="mt-3 text-sm text-slate-600">
-                  {{ accelerometerTiltReady ? 'Les quatre inclinaisons ont bien reagi.' : 'Continue a incliner le telephone dans chaque direction.' }}
-                </p>
-              </div>
-
-              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Repere visuel</p>
-                <div class="mt-5 flex justify-center">
-                  <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
-                    <div
-                      class="h-40 w-28 rounded-[22px] border border-stone-300 bg-white transition-transform duration-300"
-                      :style="{
-                        transform:
-                          accelerometerCurrentTilt === 'left'
-                            ? 'rotate(-10deg) translateX(-10px)'
-                            : accelerometerCurrentTilt === 'right'
-                              ? 'rotate(10deg) translateX(10px)'
-                              : accelerometerCurrentTilt === 'up'
-                                ? 'translateY(-10px)'
-                                : accelerometerCurrentTilt === 'down'
-                                  ? 'translateY(10px)'
-                                  : 'translateY(0)'
-                      }"
-                    />
-                  </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <section v-else-if="isGyroscopeTest && guidedState.phase === 'active'" class="space-y-4">
+          <section v-else-if="isGyroscopeTest && guidedState.phase === 'active'">
             <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Rotation</p>
-              <h2 class="mt-2 text-2xl font-bold text-slate-950">Fais pivoter le telephone</h2>
-              <p class="mt-2 text-sm leading-6 text-slate-600">
-                Tourne le telephone autour de lui-meme dans plusieurs orientations pour reveiller les trois axes gyroscopiques.
-              </p>
-              <p class="mt-3 text-sm font-medium" :class="sensorPermissionState === 'denied' ? 'text-amber-700' : 'text-slate-700'">
-                {{
-                  sensorPermissionState === 'denied'
-                    ? 'Le mouvement n’est pas accessible. Tu pourras tout de meme donner ton ressenti.'
-                    : 'Continue a faire pivoter le telephone jusqu’a valider les trois directions.'
-                }}
-              </p>
-            </div>
-
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div
-                v-for="axis in [
-                  { key: 'alpha', label: 'Axe alpha' },
-                  { key: 'beta', label: 'Axe beta' },
-                  { key: 'gamma', label: 'Axe gamma' }
-                ]"
-                :key="axis.key"
-                class="rounded-[20px] border px-4 py-4"
-                :class="gyroscopeObservedAxes.includes(axis.key) ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'"
-              >
-                <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="gyroscopeObservedAxes.includes(axis.key) ? 'text-emerald-700' : 'text-slate-500'">
+              <div class="flex justify-center">
+                <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
+                  <div
+                    class="h-40 w-28 rounded-[22px] border border-stone-300 bg-white transition-transform duration-300"
+                    :style="{
+                      transform:
+                        gyroscopeCurrentAxis === 'alpha'
+                          ? 'rotate(14deg)'
+                          : gyroscopeCurrentAxis === 'beta'
+                            ? 'rotateX(24deg)'
+                            : gyroscopeCurrentAxis === 'gamma'
+                              ? 'rotateY(24deg)'
+                              : 'rotate(0deg)'
+                    }"
+                  />
+                </div>
+              </div>
+              <div class="mt-5 grid grid-cols-3 gap-3">
+                <div
+                  v-for="axis in [
+                    { key: 'alpha', label: 'Alpha' },
+                    { key: 'beta', label: 'Beta' },
+                    { key: 'gamma', label: 'Gamma' }
+                  ]"
+                  :key="axis.key"
+                  class="rounded-[18px] px-4 py-3 text-sm font-medium"
+                  :class="gyroscopeObservedAxes.includes(axis.key) ? 'bg-emerald-50 text-emerald-900' : 'bg-stone-100 text-slate-600'"
+                >
                   {{ axis.label }}
-                </p>
-                <p class="mt-2 text-sm font-medium" :class="gyroscopeObservedAxes.includes(axis.key) ? 'text-emerald-900' : 'text-slate-700'">
-                  {{ gyroscopeObservedAxes.includes(axis.key) ? 'Observe' : 'En attente' }}
-                </p>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr]">
-              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Progression</p>
-                <p class="mt-3 text-sm text-slate-600">
-                  {{ gyroscopeAxesReady ? 'Les trois mouvements ont bien reagi.' : 'Continue a faire pivoter le telephone dans plusieurs sens.' }}
-                </p>
-              </div>
-
-              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Repere visuel</p>
-                <div class="mt-5 flex justify-center">
-                  <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
-                    <div
-                      class="h-40 w-28 rounded-[22px] border border-stone-300 bg-white transition-transform duration-300"
-                      :style="{
-                        transform:
-                          gyroscopeCurrentAxis === 'alpha'
-                            ? 'rotate(14deg)'
-                            : gyroscopeCurrentAxis === 'beta'
-                              ? 'rotateX(24deg)'
-                              : gyroscopeCurrentAxis === 'gamma'
-                                ? 'rotateY(24deg)'
-                                : 'rotate(0deg)'
-                      }"
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -369,55 +270,18 @@
           </section>
 
           <section v-else-if="isMicrophoneTest && ['active', 'confirm'].includes(guidedState.phase)">
-            <div class="space-y-4">
-              <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Microphone</p>
-                    <h2 class="mt-2 text-2xl font-bold text-slate-950">Fais monter le signal audio</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">
-                      Parle, souffle ou tapote pres du micro. Verifie que le signal reagit puis passe manuellement a la validation.
-                    </p>
-                  </div>
-                  <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="badgeClass">
-                    {{ badgeLabel }}
-                  </span>
-                </div>
-              </div>
-
-              <MicrophoneLivePanel
-                hint="Parle ou tapote pres du micro. La courbe doit reagir rapidement."
-                :level="microphoneLevel"
-                :peak-level="microphonePeakLevel"
-                :sound-detected="microphoneSoundDetected"
-                :permission-state="String(guidedState.metrics.permissionState ?? microphoneRuntime.permissionState.value)"
-                :waveform="microphoneWaveform"
-              />
-
-              <div class="flex justify-end">
-                <AppButton variant="secondary" @click="retryMicrophoneTest">Relancer le micro</AppButton>
-              </div>
-            </div>
+            <MicrophoneLivePanel
+              hint="Parle ou tapote pres du micro. La courbe doit reagir rapidement."
+              :level="microphoneLevel"
+              :peak-level="microphonePeakLevel"
+              :sound-detected="microphoneSoundDetected"
+              :permission-state="String(guidedState.metrics.permissionState ?? microphoneRuntime.permissionState.value)"
+              :waveform="microphoneWaveform"
+            />
           </section>
 
           <section v-else-if="isMediaTest && ['active', 'confirm'].includes(guidedState.phase)">
-            <div class="mb-4 flex items-start justify-between gap-3 rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3">
-              <div>
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  {{ isAutofocusTest ? 'Mise au point' : 'Camera' }}
-                </p>
-                <h2 class="mt-1 text-2xl font-bold text-slate-950">
-                  {{ currentGuidedSubStep?.label || 'Verification camera' }}
-                </h2>
-                <p class="mt-1 text-sm text-slate-600">
-                  {{ currentGuidedSubStep?.instruction || 'Observe le flux puis valide le comportement attendu.' }}
-                </p>
-              </div>
-              <span class="shrink-0 rounded-full bg-stone-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-                {{ isAutofocusTest ? 'guide' : 'live' }}
-              </span>
-            </div>
-            <div class="mt-5">
+            <div class="space-y-4">
               <CameraLivePanel
                 ref="cameraPanelRef"
                 :stream="cameraStream"
@@ -431,41 +295,14 @@
                 @switch-device="switchRearDevice"
                 @preview-ready-change="handleCameraPreviewReadyChange"
               />
-            </div>
 
-            <div v-if="props.testId === 'camera-rear'" class="mt-4 rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Objectifs</p>
-                  <p class="mt-1 text-sm text-slate-600">
-                    {{ rearRemainingObjectiveCount === 0 ? 'Toutes les vues ont bien ete prises.' : `${rearRemainingObjectiveCount} vue${rearRemainingObjectiveCount > 1 ? 's' : ''} restante${rearRemainingObjectiveCount > 1 ? 's' : ''}.` }}
-                  </p>
-                </div>
-                <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="rearAllObjectivesCaptured ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-slate-700'">
+              <div v-if="props.testId === 'camera-rear'" class="flex items-center justify-between rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3 text-sm text-slate-600">
+                <span>
+                  {{ rearRemainingObjectiveCount === 0 ? 'Toutes les vues sont faites.' : `${rearRemainingObjectiveCount} vue restante.` }}
+                </span>
+                <span class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-slate-700">
                   {{ rearCapturedDeviceIds.length }}/{{ rearAvailableDeviceIds.length || selectedCameraDevices.length }}
                 </span>
-              </div>
-
-              <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div
-                  v-for="device in selectedCameraDevices"
-                  :key="device.deviceId"
-                  class="rounded-[20px] border px-4 py-4"
-                  :class="rearCapturedDeviceIds.includes(device.deviceId) ? 'border-emerald-200 bg-emerald-50' : cameraActiveDeviceId === device.deviceId ? 'border-slate-300 bg-stone-50' : 'border-stone-300/80 bg-[color:var(--color-surface)]'"
-                >
-                  <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="rearCapturedDeviceIds.includes(device.deviceId) ? 'text-emerald-700' : 'text-slate-500'">
-                    {{ device.label }}
-                  </p>
-                  <p class="mt-2 text-sm font-medium" :class="rearCapturedDeviceIds.includes(device.deviceId) ? 'text-emerald-900' : 'text-slate-700'">
-                    {{
-                      rearCapturedDeviceIds.includes(device.deviceId)
-                          ? 'ok'
-                        : cameraActiveDeviceId === device.deviceId
-                          ? 'en cours'
-                          : 'a faire'
-                    }}
-                  </p>
-                </div>
               </div>
             </div>
           </section>
@@ -557,11 +394,9 @@ import {
 import type { DiagnosticGuidedUserVerdict } from '../domain/diagnostic'
 import {
   getProductTestCopy,
-  getVisibleCurrentIndex,
   getVisibleProgressModel,
   getVisibleSubStepMeta,
   getVisibleTestId,
-  getVisibleTestIds
 } from '../lib/productPresentation'
 import { clearSessionCapture, getSessionCapture, setSessionCapture } from '../lib/sessionMedia'
 import { useDiagnosticStore } from '../stores/diagnostic'
@@ -595,9 +430,7 @@ const step = computed(() => store.getStepByTestId(props.sessionId, props.testId)
 const nextStep = computed(() => store.getNextStep(props.sessionId, props.testId))
 const currentVisibleTestId = computed(() => getVisibleTestId(props.testId))
 const visibleSubStepMeta = computed(() => getVisibleSubStepMeta(props.testId))
-const visibleTestIds = computed(() => getVisibleTestIds(session.value?.steps.map((entry) => entry.testId) ?? []))
 const visibleProgress = computed(() => getVisibleProgressModel(session.value?.steps ?? [], props.testId))
-const currentIndex = computed(() => getVisibleCurrentIndex(session.value?.steps.map((entry) => entry.testId) ?? [], props.testId))
 const guidedState = computed(() => step.value?.guidedState ?? null)
 const productTestCopy = computed(() =>
   getProductTestCopy(
@@ -805,29 +638,62 @@ const sensorPanelHint = computed(() => {
   return 'Attends une position, puis verifie la coherence des mesures GPS.'
 })
 
-const helperText = computed(() => {
-  if (props.testId === 'device-info') {
-    return 'Preparation rapide du telephone.'
+const instructionEyebrow = computed(() => {
+  if (visibleSubStepMeta.value) {
+    return `${visibleSubStepMeta.value.current} / ${visibleSubStepMeta.value.total}`
   }
 
-  if (step.value?.status === 'running' && testDefinition.value?.mode === 'automatic') {
-    return 'Verification en cours.'
-  }
-
-  if (step.value?.result) {
-    return visibleSubStepMeta.value ? `${productTestCopy.value.label} est termine.` : 'Cette etape est terminee.'
-  }
-
-  if (testDefinition.value?.mode === 'guided') {
-    if (currentGuidedSubStep.value?.label) {
-      return currentGuidedSubStep.value.label
-    }
-
-    return 'Suis simplement la consigne a l’ecran.'
-  }
-
-  return 'Lance la verification.'
+  return 'A faire'
 })
+
+const instructionTitle = computed(() => {
+  if (props.testId === 'device-info') {
+    return 'Preparation rapide'
+  }
+
+  return currentGuidedSubStep.value?.label ?? productTestCopy.value.label
+})
+
+const instructionText = computed(() => {
+  if (props.testId === 'device-info') {
+    return 'Le telephone est prepare avant de lancer les verifications.'
+  }
+
+  if (props.testId === 'touch') {
+    return 'Passe sur toute la grille. En secours, 5 taps rapides terminent le test.'
+  }
+
+  if (props.testId === 'multitouch') {
+    return 'Pose 2 puis 3 doigts ensemble pour verifier la detection simultanee.'
+  }
+
+  if (props.testId === 'rotation') {
+    return 'Tourne le telephone pour faire apparaitre portrait et paysage.'
+  }
+
+  if (props.testId === 'accelerometer') {
+    return 'Incline le telephone a gauche, a droite, vers le haut et vers le bas.'
+  }
+
+  if (props.testId === 'gyroscope') {
+    return 'Fais pivoter le telephone dans plusieurs sens pour reveiller les trois axes.'
+  }
+
+  if (props.testId === 'compass') {
+    return 'Tourne doucement le telephone et verifie que la direction suit bien.'
+  }
+
+  if (props.testId === 'gps') {
+    return 'Attends la position et verifie qu’elle semble coherente.'
+  }
+
+  if (props.testId === 'microphone') {
+    return 'Parle, souffle ou tapote pres du micro pour faire reagir le signal.'
+  }
+
+  return currentGuidedSubStep.value?.instruction ?? 'Suis simplement la consigne a l’ecran.'
+})
+
 const visibleSubStepLabel = computed(() => {
   if (!visibleSubStepMeta.value || visibleSubStepMeta.value.total <= 1) {
     return ''
@@ -836,40 +702,6 @@ const visibleSubStepLabel = computed(() => {
   const currentLabel = currentGuidedSubStep.value?.label ?? testDefinition.value?.name ?? 'Sous-etape'
 
   return `${visibleSubStepMeta.value.current} / ${visibleSubStepMeta.value.total} dans ${visibleSubStepMeta.value.label} · ${currentLabel}`
-})
-
-const badgeLabel = computed(() => {
-  if (!step.value?.result) {
-    return step.value?.status === 'running' ? 'en cours' : 'a faire'
-  }
-
-  if (step.value.result.status === 'pass') {
-    return 'ok'
-  }
-
-  if (step.value.result.status === 'failed') {
-    return 'attention'
-  }
-
-  return 'a verifier'
-})
-
-const badgeClass = computed(() => {
-  const status = step.value?.result?.status ?? (step.value?.status === 'running' ? 'pending' : 'skipped')
-
-  if (status === 'pass') {
-    return 'bg-emerald-100 text-emerald-700'
-  }
-
-  if (status === 'warning' || status === 'pending') {
-    return 'bg-amber-100 text-amber-700'
-  }
-
-  if (status === 'failed') {
-    return 'bg-rose-100 text-rose-700'
-  }
-
-  return 'bg-slate-200 text-slate-700'
 })
 
 const launchButtonLabel = computed(() => {

@@ -1,13 +1,6 @@
 <template>
-  <div class="space-y-4">
-    <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{{ title }}</p>
-      <p class="mt-1 text-sm text-slate-600">{{ hint }}</p>
-    </div>
-
-    <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
-      <template v-if="variant === 'compass'">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Boussole</p>
+  <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
+    <template v-if="variant === 'compass'">
         <div class="mt-4 flex justify-center">
           <div class="relative h-52 w-52 rounded-full border border-stone-300/80 bg-radial-[at_50%_35%] from-white via-stone-100 to-stone-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
             <div class="absolute inset-3 rounded-full border border-stone-300/70" />
@@ -43,30 +36,27 @@
         <p class="mt-4 text-center text-sm font-medium text-slate-700">
           {{ compassLabel }}
         </p>
-      </template>
+    </template>
 
-      <template v-else-if="variant === 'gps'">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">GPS</p>
-        <div class="mt-4 rounded-[20px] border border-stone-300 bg-stone-100 px-4 py-5">
-          <p class="text-sm font-medium text-slate-700">{{ gpsStatusLabel }}</p>
-          <p class="mt-2 text-sm text-slate-500">{{ gpsSecondaryLabel }}</p>
-        </div>
-      </template>
+    <template v-else-if="variant === 'gps'">
+      <div class="rounded-[20px] border border-stone-300 bg-stone-100 px-4 py-5">
+        <p class="text-sm font-medium text-slate-700">{{ gpsStatusLabel }}</p>
+        <p class="mt-2 text-sm text-slate-500">{{ gpsSecondaryLabel }}</p>
+      </div>
+    </template>
 
-      <template v-else>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Mouvement</p>
-        <div class="mt-4 flex justify-center">
-          <div class="perspective-[1000px]">
-            <div
-              class="h-44 w-24 rounded-[24px] border border-stone-300 bg-linear-to-b from-stone-200 to-stone-50 p-3 transition-transform duration-150"
-              :style="phoneTransform"
-            >
-              <div class="h-full rounded-[18px] border border-stone-300 bg-white" />
-            </div>
+    <template v-else>
+      <div class="flex justify-center">
+        <div class="perspective-[1000px]">
+          <div
+            class="h-44 w-24 rounded-[24px] border border-stone-300 bg-linear-to-b from-stone-200 to-stone-50 p-3 transition-transform duration-150"
+            :style="phoneTransform"
+          >
+            <div class="h-full rounded-[18px] border border-stone-300 bg-white" />
           </div>
         </div>
-      </template>
-    </div>
+      </div>
+    </template>
   </div>
 </template>
 
