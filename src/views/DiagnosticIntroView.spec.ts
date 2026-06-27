@@ -48,6 +48,6 @@ describe('DiagnosticIntroView', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.name).toBe('diagnostic-auto-test')
-    expect(useDiagnosticStore().activeSession?.steps[0]?.testId).toBe('device-info')
+    expect(useDiagnosticStore().activeSession?.steps[0]?.testId).toBe('screen')
   })
 })

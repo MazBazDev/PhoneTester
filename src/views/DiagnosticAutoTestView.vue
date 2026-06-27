@@ -76,7 +76,15 @@
           <PhonePreviewPanel mode="touch-intro" />
         </section>
 
-        <AppCard v-if="step.result && !screenImmersiveActive">
+        <CompletionCheckPanel
+          v-if="showCompletionCheck"
+          :animated="completionTransitionActive"
+          :animation-seed="completionAnimationSeed"
+          :title="`${productTestCopy.label} valide`"
+          :description="completionTransitionSummary || step.result?.summary || ''"
+        />
+
+        <AppCard v-else-if="step.result && !screenImmersiveActive">
           <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Test termine</p>
           <p class="mt-2 text-base font-semibold text-slate-950">{{ productTestCopy.label }}</p>
           <p class="mt-2 text-sm leading-6 text-slate-600">{{ step.result.summary }}</p>
@@ -267,7 +275,7 @@
       </div>
 
       <template #actions>
-        <template v-if="step.result">
+        <template v-if="step.result && !completionTransitionActive">
           <AppButton v-if="previousStep" class="flex-1" variant="secondary" @click="goPrevious">
             Precedent
           </AppButton>
@@ -344,6 +352,7 @@ import AppButton from '../components/AppButton.vue'
 import AppCard from '../components/AppCard.vue'
 import AppShell from '../components/AppShell.vue'
 import CameraLivePanel from '../components/CameraLivePanel.vue'
+import CompletionCheckPanel from '../components/CompletionCheckPanel.vue'
 import MicrophoneLivePanel from '../components/MicrophoneLivePanel.vue'
 import MultitouchPadPanel from '../components/MultitouchPadPanel.vue'
 import PhonePreviewPanel from '../components/PhonePreviewPanel.vue'
@@ -393,6 +402,10 @@ const showQuitDialog = ref(false)
 const rotationTrackingKey = ref<string | null>(null)
 const rotationUiCleanups: Array<() => void> = []
 const defaultThemeColor = '#0f172a'
+const COMPLETION_DELAY_MS = 700
+const completionTransitionActive = ref(false)
+const completionAnimationSeed = ref(0)
+const completionTransitionSummary = ref('')
 
 const session = computed(() => store.getSessionById(props.sessionId))
 const testDefinition = computed(() => store.getTestDefinition(props.testId))
@@ -554,16 +567,20 @@ const autofocusTargetLabel = computed(() => {
   return 'Mise au point'
 })
 const touchImmersiveActive = computed(
-  () => Boolean(testDefinition.value?.immersive && guidedState.value?.phase === 'active' && props.testId === 'touch')
+  () => Boolean(testDefinition.value?.immersive && guidedState.value?.phase === 'active' && props.testId === 'touch' && !completionTransitionActive.value)
 )
 const screenImmersiveActive = computed(
-  () => Boolean(testDefinition.value?.immersive && guidedState.value?.phase === 'active' && props.testId === 'screen')
+  () => Boolean(testDefinition.value?.immersive && guidedState.value?.phase === 'active' && props.testId === 'screen' && !completionTransitionActive.value)
 )
 const screenPanelStyle = computed(() => ({
   backgroundColor: currentGuidedSubStep.value?.color || '#ffffff',
   paddingTop: screenImmersiveActive.value ? '0' : undefined,
   paddingBottom: screenImmersiveActive.value ? '0' : undefined
 }))
+const showCompletionCheck = computed(() =>
+  !screenImmersiveActive.value &&
+  (completionTransitionActive.value || step.value?.result?.status === 'pass')
+)
 
 const touchRows = computed(() => Number(guidedState.value?.metrics.rows ?? 12))
 const touchCols = computed(() => Number(guidedState.value?.metrics.cols ?? 7))
@@ -687,10 +704,6 @@ const instructionEyebrow = computed(() => {
 })
 
 const instructionTitle = computed(() => {
-  if (props.testId === 'device-info') {
-    return 'Preparation rapide'
-  }
-
   if (guidedState.value?.phase === 'idle' && props.testId === 'screen') {
     return 'Verifier les couleurs en plein ecran'
   }
@@ -703,10 +716,6 @@ const instructionTitle = computed(() => {
 })
 
 const instructionText = computed(() => {
-  if (props.testId === 'device-info') {
-    return 'Le telephone est prepare avant de lancer les verifications.'
-  }
-
   if (props.testId === 'touch') {
     if (guidedState.value?.phase === 'idle') {
       return 'Le test passera en plein ecran. Fais glisser ton doigt partout sur la grille puis termine si toute la surface reagit.'
@@ -949,8 +958,24 @@ const updateFromSensorError = (error: SensorError) => {
   })
 }
 
+const pause = (durationMs: number) => new Promise((resolve) => setTimeout(resolve, durationMs))
+
+const playCompletionTransition = async (summary: string) => {
+  completionTransitionSummary.value = summary
+  completionAnimationSeed.value += 1
+  completionTransitionActive.value = true
+  await pause(COMPLETION_DELAY_MS)
+  completionTransitionActive.value = false
+}
+
 const runCurrentAutomaticTest = async () => {
   await store.runTest(props.sessionId, props.testId)
+
+  const result = store.getStepByTestId(props.sessionId, props.testId)?.result
+
+  if (result?.status === 'pass') {
+    await playCompletionTransition(result.summary)
+  }
 }
 
 const enterScreenFullscreen = async () => {
@@ -1068,6 +1093,17 @@ const finalizeCurrentTest = async (verdict?: DiagnosticGuidedUserVerdict | null)
 
   if (verdict !== undefined) {
     store.setGuidedUserVerdict(props.sessionId, props.testId, verdict)
+  }
+
+  const previewResult =
+    testDefinition.value?.mode === 'guided' &&
+    guidedState.value &&
+    testDefinition.value.finalizeGuidedResult
+      ? testDefinition.value.finalizeGuidedResult(guidedState.value)
+      : null
+
+  if (previewResult?.status === 'pass') {
+    await playCompletionTransition(previewResult.summary)
   }
 
   store.finalizeGuidedTest(props.sessionId, props.testId)
@@ -1759,6 +1795,8 @@ watch(
   () => {
     stopRotationUiTracking()
     autoStartedTestKey.value = null
+    completionTransitionActive.value = false
+    completionTransitionSummary.value = ''
     showQuitDialog.value = false
     lastScreenProbeTapAt.value = 0
     lastTouchTapAt.value = 0

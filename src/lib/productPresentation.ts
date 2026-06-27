@@ -73,10 +73,6 @@ const VISIBLE_TEST_GROUPS: VisibleTestGroup[] = [
 ]
 
 const TEST_COPY: Record<string, ProductTestCopy> = {
-  'device-info': {
-    label: 'Identification',
-    description: 'On verifie rapidement que le telephone repond normalement.'
-  },
   screen: {
     label: 'Ecran',
     description: 'On verifie l’affichage, le tactile et le multitouch dans une meme sequence.'

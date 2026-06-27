@@ -35,7 +35,6 @@ describe('productPresentation', () => {
     })
 
     const steps = [
-      { testId: 'device-info', result: { status: 'pass' } },
       { testId: 'screen', result: { status: 'pass' } },
       { testId: 'touch', result: { status: 'pass' } },
       { testId: 'multitouch', result: { status: 'pass' } },
@@ -63,7 +62,6 @@ describe('productPresentation', () => {
 
   it('builds an expanded block progress model for the current visible step', () => {
     const steps = [
-      { testId: 'device-info', result: { status: 'pass' } },
       { testId: 'screen', result: { status: 'pass' } },
       { testId: 'touch', result: null },
       { testId: 'multitouch', result: null },

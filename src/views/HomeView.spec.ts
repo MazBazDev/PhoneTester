@@ -50,7 +50,6 @@ describe('HomeView', () => {
     const store = useDiagnosticStore()
     const session = store.startSession()
 
-    store.runTest(session.id, 'device-info')
     store.startGuidedTest(session.id, 'screen')
     store.completeGuidedStep(session.id, 'screen')
     store.completeGuidedStep(session.id, 'screen')

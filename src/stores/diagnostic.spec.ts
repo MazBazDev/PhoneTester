@@ -16,7 +16,7 @@ describe('diagnostic store', () => {
     const session = store.startSession()
 
     expect(session.id).toBe('session-1')
-    expect(session.steps).toHaveLength(11)
+    expect(session.steps).toHaveLength(10)
     expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.steps).toHaveLength(6)
     expect(JSON.parse(localStorage.getItem('phone-tester.active-session') || '{}').id).toBe('session-1')
   })
@@ -31,7 +31,6 @@ describe('diagnostic store', () => {
         updatedAt: '2025-01-01T00:00:00.000Z',
         deviceTarget: 'iphone-safari',
         steps: [
-          { testId: 'device-info', status: 'completed', result: { testId: 'device-info', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'screen', status: 'completed', result: { testId: 'screen', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'touch', status: 'completed', result: { testId: 'touch', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
           { testId: 'multitouch', status: 'completed', result: { testId: 'multitouch', status: 'pass', summary: 'ok', details: [], startedAt: '', finishedAt: '' }, guidedState: null },
@@ -82,10 +81,17 @@ describe('diagnostic store', () => {
     const store = useDiagnosticStore()
     const session = store.startSession()
 
-    await store.runTest(session.id, 'device-info')
+    store.startGuidedTest(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.finalizeGuidedTest(session.id, 'screen')
 
-    expect(store.getStepByTestId(session.id, 'device-info')?.result?.testId).toBe('device-info')
-    expect(store.sessionProgress).toBe(9)
+    expect(store.getStepByTestId(session.id, 'screen')?.result?.testId).toBe('screen')
+    expect(store.sessionProgress).toBe(10)
   })
 
   it('finalizes compass and gps guided tests', () => {
@@ -220,13 +226,20 @@ describe('diagnostic store', () => {
     const store = useDiagnosticStore()
     const session = store.startSession()
 
-    await store.runTest(session.id, 'device-info')
-    expect(store.getStepByTestId(session.id, 'device-info')?.result).not.toBeNull()
+    store.startGuidedTest(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.finalizeGuidedTest(session.id, 'screen')
+    expect(store.getStepByTestId(session.id, 'screen')?.result).not.toBeNull()
 
-    store.resetStep(session.id, 'device-info')
+    store.resetStep(session.id, 'screen')
 
-    expect(store.getStepByTestId(session.id, 'device-info')?.result).toBeNull()
-    expect(store.getStepByTestId(session.id, 'device-info')?.status).toBe('pending')
+    expect(store.getStepByTestId(session.id, 'screen')?.result).toBeNull()
+    expect(store.getStepByTestId(session.id, 'screen')?.status).toBe('pending')
   })
 
   it('resets the persisted session', () => {
