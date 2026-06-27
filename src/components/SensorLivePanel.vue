@@ -53,20 +53,35 @@
         <template v-if="variant === 'compass'">
           <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Compas</p>
           <div class="mt-4 flex justify-center">
-            <div class="relative flex h-48 w-48 items-center justify-center rounded-full border border-stone-300 bg-stone-100">
-              <div class="absolute inset-4 rounded-full border border-dashed border-stone-300" />
-              <div class="absolute top-4 text-xs font-semibold text-slate-950">N</div>
-              <div class="absolute bottom-4 text-xs font-semibold text-slate-500">S</div>
-              <div class="absolute left-4 text-xs font-semibold text-slate-500">O</div>
-              <div class="absolute right-4 text-xs font-semibold text-slate-500">E</div>
-              <div
-                class="absolute left-1/2 top-1/2 h-20 w-1 -translate-x-1/2 -translate-y-full origin-bottom transition-transform duration-150"
-                :style="compassNeedleTransform"
-              >
-                <div class="h-full w-full rounded-full bg-slate-950" />
-                <div class="absolute left-1/2 top-0 h-4 w-4 -translate-x-1/2 -translate-y-1 rounded-full bg-rose-500" />
+            <div class="relative h-52 w-52 rounded-full border border-stone-300/80 bg-radial-[at_50%_35%] from-white via-stone-100 to-stone-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+              <div class="absolute inset-3 rounded-full border border-stone-300/70" />
+              <div class="absolute inset-6 rounded-full border border-dashed border-stone-300/80" />
+              <div class="absolute inset-0">
+                <div class="absolute left-1/2 top-3 -translate-x-1/2 text-xs font-semibold tracking-[0.24em] text-slate-950">N</div>
+                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-semibold tracking-[0.24em] text-slate-500">S</div>
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-[0.24em] text-slate-500">O</div>
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-[0.24em] text-slate-500">E</div>
               </div>
-              <div class="absolute h-4 w-4 rounded-full bg-slate-950" />
+              <div class="absolute inset-0">
+                <div
+                  v-for="tick in compassTicks"
+                  :key="tick"
+                  class="absolute left-1/2 top-1/2 h-[5.2rem] w-[1px] origin-bottom -translate-x-1/2 -translate-y-full bg-stone-300/90"
+                  :style="{ transform: `translateX(-50%) translateY(-100%) rotate(${tick}deg)` }"
+                />
+              </div>
+              <div class="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2">
+                <div
+                  data-testid="compass-needle"
+                  class="relative h-full w-full origin-center will-change-transform"
+                  :style="compassNeedleTransform"
+                >
+                  <div class="absolute left-1/2 top-1/2 h-[4.75rem] w-1 -translate-x-1/2 -translate-y-full rounded-full bg-slate-950 shadow-[0_0_16px_rgba(15,23,42,0.08)]" />
+                  <div class="absolute left-1/2 top-[calc(50%-5rem)] h-0 w-0 -translate-x-1/2 border-x-[8px] border-b-[16px] border-x-transparent border-b-rose-500 drop-shadow-[0_4px_10px_rgba(244,63,94,0.28)]" />
+                  <div class="absolute left-1/2 top-1/2 h-10 w-[2px] -translate-x-1/2 rounded-full bg-slate-300/90" />
+                </div>
+              </div>
+              <div data-testid="compass-pivot" class="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/60 bg-slate-950 shadow-[0_8px_18px_rgba(15,23,42,0.18)]" />
             </div>
           </div>
           <p class="mt-4 text-center text-sm font-medium text-slate-700">
@@ -102,8 +117,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { MotionPermissionState } from '../composables/useMotionSensors'
+import { normalizeAngle, stepAngleTowards } from '../utils/angles'
 
 interface AxisEntry {
   label: string
@@ -133,6 +149,35 @@ const props = defineProps<{
   gpsMainValue?: string
   gpsSecondaryLabel?: string
 }>()
+
+const compassTicks = Array.from({ length: 12 }, (_, index) => index * 30)
+const displayHeading = ref(0)
+let compassAnimationFrameId: number | null = null
+
+const stopCompassAnimation = () => {
+  if (compassAnimationFrameId !== null) {
+    cancelAnimationFrame(compassAnimationFrameId)
+    compassAnimationFrameId = null
+  }
+}
+
+const animateCompassHeading = (targetHeading: number) => {
+  stopCompassAnimation()
+
+  const tick = () => {
+    displayHeading.value = stepAngleTowards(displayHeading.value, targetHeading)
+
+    if (normalizeAngle(displayHeading.value) !== normalizeAngle(targetHeading)) {
+      compassAnimationFrameId = requestAnimationFrame(tick)
+      return
+    }
+
+    displayHeading.value = normalizeAngle(targetHeading)
+    compassAnimationFrameId = null
+  }
+
+  tick()
+}
 
 const permissionLabel = computed(() => {
   if (props.permissionState === 'granted') {
@@ -179,13 +224,35 @@ const phoneTransform = computed(
 )
 
 const compassNeedleTransform = computed(() => {
-  const heading = typeof props.compassHeading === 'number' ? props.compassHeading : 0
+  const heading = normalizeAngle(displayHeading.value)
   return {
-    transform: `translate(-50%, -100%) rotate(${heading}deg)`
+    transform: `rotate(${heading}deg)`
   }
 })
 
 const compassLabel = computed(() =>
   typeof props.compassHeading === 'number' ? `Cap nord estime: ${Math.round(props.compassHeading)}°` : 'Cap nord indisponible'
 )
+
+watch(
+  () => props.compassHeading,
+  (heading) => {
+    if (typeof heading !== 'number') {
+      stopCompassAnimation()
+      return
+    }
+
+    if (compassAnimationFrameId === null && displayHeading.value === 0) {
+      displayHeading.value = normalizeAngle(heading)
+      return
+    }
+
+    animateCompassHeading(heading)
+  },
+  { immediate: true }
+)
+
+onBeforeUnmount(() => {
+  stopCompassAnimation()
+})
 </script>
