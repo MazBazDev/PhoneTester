@@ -133,9 +133,19 @@ export const useCameraMedia = () => {
 
       const track = stream.getVideoTracks()[0]
       const settings = track?.getSettings()
-      activeDeviceId.value = settings?.deviceId ?? options.deviceId ?? null
 
       await listVideoDevices()
+
+      const fallbackDevice =
+        options.deviceId
+          ? availableVideoDevices.value.find((device) => device.deviceId === options.deviceId) ?? null
+          : options.facingMode
+            ? availableVideoDevices.value.find((device) =>
+                options.facingMode === 'user' ? device.facing === 'front' : device.facing === 'rear'
+              ) ?? null
+            : availableVideoDevices.value[0] ?? null
+
+      activeDeviceId.value = settings?.deviceId ?? options.deviceId ?? fallbackDevice?.deviceId ?? null
 
       const activeDevice = availableVideoDevices.value.find((device) => device.deviceId === activeDeviceId.value)
       activeDeviceLabel.value =

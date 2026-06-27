@@ -66,6 +66,8 @@ export const useCameraFrontTest = (): DiagnosticTestDefinition => ({
       streamOpened: false,
       activeDeviceLabel: 'inconnue',
       availableDeviceCount: 0,
+      activeDeviceId: null,
+      previewReady: false,
       captureSucceeded: false,
       capturePreviewAvailable: false
     },

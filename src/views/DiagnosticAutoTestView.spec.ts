@@ -738,6 +738,7 @@ describe('DiagnosticAutoTestView', () => {
     await nextTick()
     await nextTick()
     await nextTick()
+    await nextTick()
 
     expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('active')
     expect(wrapper.text()).toContain('Fais monter le signal audio')
@@ -824,6 +825,7 @@ describe('DiagnosticAutoTestView', () => {
     await nextTick()
     await nextTick()
     await nextTick()
+    await nextTick()
 
     expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('active')
 
@@ -833,4 +835,5 @@ describe('DiagnosticAutoTestView', () => {
     expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('confirm')
     expect(wrapper.text()).toContain('Verdict microphone final')
   })
+
 })

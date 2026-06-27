@@ -11,8 +11,12 @@ const buildRearDetails = (state: DiagnosticGuidedState): DiagnosticTestDetail[] 
   { label: 'Camera active', value: String(state.metrics.activeDeviceLabel ?? 'inconnue') },
   { label: 'Objectifs detectes', value: String(state.metrics.availableDeviceCount ?? 0) },
   {
-    label: 'Capture',
-    value: Boolean(state.metrics.captureSucceeded) ? 'reussie' : 'non capturee',
+    label: 'Objectifs captures',
+    value: `${Array.isArray(state.metrics.capturedDeviceIds) ? state.metrics.capturedDeviceIds.length : 0}/${Number(state.metrics.availableDeviceCount ?? 0)}`,
+  },
+  {
+    label: 'Couverture',
+    value: Boolean(state.metrics.captureSucceeded) ? 'complete' : 'incomplete',
     previewKey: Boolean(state.metrics.capturePreviewAvailable) ? 'rear-preview' : undefined
   }
 ]
@@ -21,7 +25,9 @@ const buildRearStatus = (state: DiagnosticGuidedState): TestStatus => {
   const supported = Boolean(state.metrics.supported)
   const permissionState = String(state.metrics.permissionState ?? 'unknown')
   const streamOpened = Boolean(state.metrics.streamOpened)
-  const captureSucceeded = Boolean(state.metrics.captureSucceeded)
+  const availableDeviceCount = Number(state.metrics.availableDeviceCount ?? 0)
+  const capturedDeviceIds = Array.isArray(state.metrics.capturedDeviceIds) ? state.metrics.capturedDeviceIds : []
+  const allObjectivesCaptured = availableDeviceCount > 0 && capturedDeviceIds.length >= availableDeviceCount
 
   if (!supported || permissionState === 'not_supported') {
     return 'not_supported'
@@ -35,7 +41,7 @@ const buildRearStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'failed'
   }
 
-  if (captureSucceeded && state.userVerdict === 'pass') {
+  if (allObjectivesCaptured && state.userVerdict === 'pass') {
     return 'pass'
   }
 
@@ -56,7 +62,7 @@ export const useCameraRearTest = (): DiagnosticTestDefinition => ({
       {
         id: 'rear-live',
         label: 'Flux arriere',
-        instruction: 'Verifie le flux, capture une photo, puis change d’objectif si plusieurs cameras sont detectees.',
+        instruction: 'Verifie le flux puis capture une photo sur chaque objectif arriere detecte.',
         status: 'pending',
         response: null
       }
@@ -67,6 +73,11 @@ export const useCameraRearTest = (): DiagnosticTestDefinition => ({
       streamOpened: false,
       activeDeviceLabel: 'inconnue',
       availableDeviceCount: 0,
+      availableDeviceIds: [],
+      testedDeviceIds: [],
+      capturedDeviceIds: [],
+      activeDeviceId: null,
+      previewReady: false,
       captureSucceeded: false,
       capturePreviewAvailable: false
     },
@@ -76,9 +87,9 @@ export const useCameraRearTest = (): DiagnosticTestDefinition => ({
     testId: 'camera-rear',
     status: buildRearStatus(state),
     summary:
-      Boolean(state.metrics.captureSucceeded) && state.userVerdict === 'pass'
-        ? 'Le flux arriere et la capture photo ont fonctionne correctement.'
-        : 'Le test camera arriere reste partiel, douteux ou a echoue.',
+      buildRearStatus(state) === 'pass'
+        ? 'Tous les objectifs arriere detectes ont ete verifies et captures correctement.'
+        : 'Le test camera arriere reste partiel, douteux ou incomplet.',
     details: buildRearDetails(state),
     startedAt: state.startedAt ?? new Date().toISOString(),
     finishedAt: new Date().toISOString()

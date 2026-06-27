@@ -401,7 +401,47 @@
                 :show-target="isAutofocusTest"
                 :target-label="autofocusTargetLabel"
                 @switch-device="switchRearDevice"
+                @preview-ready-change="handleCameraPreviewReadyChange"
               />
+            </div>
+
+            <div
+              v-if="props.testId === 'camera-rear'"
+              class="mt-4 rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Couverture objectifs</p>
+                  <p class="mt-1 text-sm text-slate-600">
+                    {{ rearRemainingObjectiveCount === 0 ? 'Tous les objectifs detectes ont ete captures.' : `${rearRemainingObjectiveCount} objectif${rearRemainingObjectiveCount > 1 ? 's' : ''} restant${rearRemainingObjectiveCount > 1 ? 's' : ''}.` }}
+                  </p>
+                </div>
+                <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="rearAllObjectivesCaptured ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-slate-700'">
+                  {{ rearCapturedDeviceIds.length }}/{{ rearAvailableDeviceIds.length || selectedCameraDevices.length }}
+                </span>
+              </div>
+
+              <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div
+                  v-for="device in selectedCameraDevices"
+                  :key="device.deviceId"
+                  class="rounded-[20px] border px-4 py-4"
+                  :class="rearCapturedDeviceIds.includes(device.deviceId) ? 'border-emerald-200 bg-emerald-50' : cameraActiveDeviceId === device.deviceId ? 'border-slate-300 bg-stone-50' : 'border-stone-300/80 bg-[color:var(--color-surface)]'"
+                >
+                  <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="rearCapturedDeviceIds.includes(device.deviceId) ? 'text-emerald-700' : 'text-slate-500'">
+                    {{ device.label }}
+                  </p>
+                  <p class="mt-2 text-sm font-medium" :class="rearCapturedDeviceIds.includes(device.deviceId) ? 'text-emerald-900' : 'text-slate-700'">
+                    {{
+                      rearCapturedDeviceIds.includes(device.deviceId)
+                        ? 'capture'
+                        : cameraActiveDeviceId === device.deviceId
+                          ? 'actif'
+                          : 'a tester'
+                    }}
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -616,6 +656,7 @@
         <AppButton
           v-else-if="isMediaTest && guidedState?.phase === 'active'"
           class="flex-1"
+          :disabled="mediaPrimaryActionDisabled"
           @click="handleMediaPrimaryAction"
         >
           {{ mediaPrimaryActionLabel }}
@@ -722,6 +763,38 @@ const showRearDeviceSelector = computed(
   () => props.testId === 'camera-rear' && selectedCameraDevices.value.length > 1
 )
 const currentCaptureUrl = computed(() => getSessionCapture(props.sessionId, props.testId))
+const getMetricStringList = (value: unknown) =>
+  Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
+const cameraPreviewReady = computed(() => Boolean(guidedState.value?.metrics.previewReady))
+const rearAvailableDeviceIds = computed(() => getMetricStringList(guidedState.value?.metrics.availableDeviceIds))
+const rearCapturedDeviceIds = computed(() => getMetricStringList(guidedState.value?.metrics.capturedDeviceIds))
+const rearTestedDeviceIds = computed(() => getMetricStringList(guidedState.value?.metrics.testedDeviceIds))
+const currentRearObjectiveCaptured = computed(() =>
+  props.testId === 'camera-rear' &&
+  Boolean(cameraActiveDeviceId.value && rearCapturedDeviceIds.value.includes(cameraActiveDeviceId.value))
+)
+const rearAllObjectivesCaptured = computed(() => {
+  if (props.testId !== 'camera-rear') {
+    return false
+  }
+
+  const availableIds = rearAvailableDeviceIds.value.length > 0
+    ? rearAvailableDeviceIds.value
+    : selectedCameraDevices.value.map((device) => device.deviceId)
+
+  return availableIds.length > 0 && availableIds.every((deviceId) => rearCapturedDeviceIds.value.includes(deviceId))
+})
+const rearRemainingObjectiveCount = computed(() => {
+  if (props.testId !== 'camera-rear') {
+    return 0
+  }
+
+  const availableIds = rearAvailableDeviceIds.value.length > 0
+    ? rearAvailableDeviceIds.value
+    : selectedCameraDevices.value.map((device) => device.deviceId)
+
+  return availableIds.filter((deviceId) => !rearCapturedDeviceIds.value.includes(deviceId)).length
+})
 const currentAutofocusStepId = computed(() => currentGuidedSubStep.value?.id ?? null)
 const flaggedScreenStepIds = computed(() => {
   const value = guidedState.value?.metrics.flaggedStepIds
@@ -917,9 +990,30 @@ const mediaInfoEntries = computed(() => {
       label: 'Objectifs detectes',
       value: String(guidedState.value?.metrics.availableDeviceCount ?? selectedCameraDevices.value.length)
     },
+    ...(props.testId === 'camera-rear'
+      ? [
+          {
+            label: 'Objectifs captures',
+            value: `${rearCapturedDeviceIds.value.length}/${rearAvailableDeviceIds.value.length || selectedCameraDevices.value.length}`
+          }
+        ]
+      : []),
     {
       label: 'Capture',
-      value: Boolean(guidedState.value?.metrics.captureSucceeded) ? 'reussie' : 'non capturee'
+      value:
+        props.testId === 'camera-rear'
+          ? rearAllObjectivesCaptured.value
+            ? 'complete'
+            : currentRearObjectiveCaptured.value
+              ? 'objectif capture'
+              : 'en attente'
+          : Boolean(guidedState.value?.metrics.captureSucceeded)
+            ? 'reussie'
+            : 'non capturee'
+    },
+    {
+      label: 'Preview',
+      value: cameraPreviewReady.value ? 'prete' : 'initialisation'
     }
   ]
 })
@@ -1096,6 +1190,18 @@ const launchButtonLabel = computed(() => {
 
 const mediaPrimaryActionLabel = computed(() => {
   if (isCameraCaptureTest.value) {
+    if (!cameraPreviewReady.value) {
+      return 'Initialisation...'
+    }
+
+    if (props.testId === 'camera-rear' && currentRearObjectiveCaptured.value && !rearAllObjectivesCaptured.value) {
+      return 'Changer d’objectif'
+    }
+
+    if (props.testId === 'camera-rear' && rearAllObjectivesCaptured.value) {
+      return 'Passer a la validation'
+    }
+
     return currentCaptureUrl.value ? 'Passer a la validation' : 'Prendre une photo'
   }
 
@@ -1108,6 +1214,22 @@ const mediaPrimaryActionLabel = computed(() => {
   }
 
   return 'Continuer'
+})
+
+const mediaPrimaryActionDisabled = computed(() => {
+  if (!isCameraCaptureTest.value) {
+    return false
+  }
+
+  if (!cameraPreviewReady.value) {
+    return true
+  }
+
+  if (props.testId === 'camera-rear' && currentRearObjectiveCaptured.value && !rearAllObjectivesCaptured.value) {
+    return true
+  }
+
+  return false
 })
 
 const motionStateToMetric = (state: MotionPermissionState) => state
@@ -1346,12 +1468,13 @@ const stopActiveRuntimes = () => {
   void exitScreenFullscreen()
 }
 
-const syncCameraMetrics = (overrides?: Record<string, string | number | boolean | null>) => {
+const syncCameraMetrics = (overrides?: Record<string, string | number | boolean | null | string[]>) => {
   store.updateGuidedMetrics(props.sessionId, props.testId, {
     supported: cameraRuntime.supported.value,
     permissionState: cameraRuntime.permissionState.value,
     streamOpened: cameraRuntime.streamActive.value,
     activeDeviceLabel: cameraRuntime.activeDeviceLabel.value,
+    activeDeviceId: cameraRuntime.activeDeviceId.value,
     availableDeviceCount: selectedCameraDevices.value.length,
     ...overrides
   })
@@ -1365,7 +1488,10 @@ const launchCameraTest = async () => {
   const permission = await cameraRuntime.requestPermission()
 
   syncCameraMetrics({
-    permissionState: permission
+    permissionState: permission,
+    previewReady: false,
+    activeDeviceId: null,
+    availableDeviceIds: selectedCameraDevices.value.map((device) => device.deviceId)
   })
 
   if (permission === 'denied' || permission === 'not_supported') {
@@ -1377,7 +1503,19 @@ const launchCameraTest = async () => {
   })
 
   syncCameraMetrics({
-    streamOpened: Boolean(stream)
+    streamOpened: Boolean(stream),
+    activeDeviceId: cameraRuntime.activeDeviceId.value,
+    activeDeviceLabel: cameraRuntime.activeDeviceLabel.value,
+    previewReady: false,
+    availableDeviceIds: selectedCameraDevices.value.map((device) => device.deviceId),
+    ...(props.testId === 'camera-rear'
+      ? {
+          testedDeviceIds: [],
+          capturedDeviceIds: [],
+          captureSucceeded: false,
+          capturePreviewAvailable: false
+        }
+      : {})
   })
 }
 
@@ -1633,6 +1771,15 @@ const launchGuidedTest = async () => {
 
 const captureCameraFrame = () => {
   const dataUrl = cameraRuntime.captureFrame(cameraPanelRef.value?.videoElement ?? null)
+  const activeDeviceId = cameraActiveDeviceId.value
+
+  if (props.testId === 'camera-rear' && !activeDeviceId) {
+    syncCameraMetrics({
+      captureSucceeded: false,
+      capturePreviewAvailable: false
+    })
+    return
+  }
 
   if (!dataUrl) {
     syncCameraMetrics({
@@ -1643,9 +1790,30 @@ const captureCameraFrame = () => {
   }
 
   setSessionCapture(props.sessionId, props.testId, dataUrl)
+
+  const testedDeviceIds =
+    props.testId === 'camera-rear' && activeDeviceId
+      ? Array.from(new Set([...rearTestedDeviceIds.value, activeDeviceId]))
+      : rearTestedDeviceIds.value
+  const capturedDeviceIds =
+    props.testId === 'camera-rear' && activeDeviceId
+      ? Array.from(new Set([...rearCapturedDeviceIds.value, activeDeviceId]))
+      : rearCapturedDeviceIds.value
+  const availableDeviceIds =
+    props.testId === 'camera-rear'
+      ? selectedCameraDevices.value.map((device) => device.deviceId)
+      : rearAvailableDeviceIds.value
+
   syncCameraMetrics({
     captureSucceeded: true,
-    capturePreviewAvailable: true
+    capturePreviewAvailable: true,
+    ...(props.testId === 'camera-rear'
+      ? {
+          testedDeviceIds,
+          capturedDeviceIds,
+          availableDeviceIds
+        }
+      : {})
   })
 }
 
@@ -1654,9 +1822,26 @@ const switchRearDevice = async (deviceId: string) => {
     return
   }
 
+  clearSessionCapture(props.sessionId, props.testId)
   const stream = await cameraRuntime.switchDevice(deviceId)
   syncCameraMetrics({
-    streamOpened: Boolean(stream)
+    streamOpened: Boolean(stream),
+    activeDeviceId: cameraRuntime.activeDeviceId.value,
+    activeDeviceLabel: cameraRuntime.activeDeviceLabel.value,
+    previewReady: false,
+    capturePreviewAvailable: false,
+    captureSucceeded: rearAllObjectivesCaptured.value,
+    availableDeviceIds: selectedCameraDevices.value.map((device) => device.deviceId)
+  })
+}
+
+const handleCameraPreviewReadyChange = (ready: boolean) => {
+  if (!isMediaTest.value || guidedState.value?.phase !== 'active') {
+    return
+  }
+
+  syncCameraMetrics({
+    previewReady: ready
   })
 }
 
@@ -1764,8 +1949,20 @@ const finishMicrophoneCollection = () => {
 
 const handleMediaPrimaryAction = () => {
   if (isCameraCaptureTest.value) {
-    if (!currentCaptureUrl.value) {
+    if (!cameraPreviewReady.value) {
+      return
+    }
+
+    if (props.testId === 'camera-rear' && currentRearObjectiveCaptured.value && !rearAllObjectivesCaptured.value) {
+      return
+    }
+
+    if (!currentCaptureUrl.value || (props.testId === 'camera-rear' && !currentRearObjectiveCaptured.value)) {
       captureCameraFrame()
+      return
+    }
+
+    if (props.testId === 'camera-rear' && !rearAllObjectivesCaptured.value) {
       return
     }
 

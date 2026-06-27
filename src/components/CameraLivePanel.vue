@@ -17,6 +17,9 @@
         autoplay
         playsinline
         muted
+        @loadedmetadata="handlePreviewReady"
+        @canplay="handlePreviewReady"
+        @playing="handlePreviewReady"
       />
       <div
         v-if="showTarget"
@@ -70,7 +73,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  switchDevice: [deviceId: string]
+  'switch-device': [deviceId: string]
+  'preview-ready-change': [ready: boolean]
 }>()
 
 const videoElement = ref<HTMLVideoElement | null>(null)
@@ -82,11 +86,15 @@ watch(
       return
     }
 
+    emit('preview-ready-change', false)
     element.srcObject = stream
 
     if (stream) {
       void element.play().catch(() => undefined)
+      return
     }
+
+    element.pause()
   },
   { immediate: true }
 )
@@ -98,7 +106,19 @@ const onDeviceChange = (event: Event) => {
     return
   }
 
-  emit('switchDevice', value)
+  emit('switch-device', value)
+}
+
+const handlePreviewReady = () => {
+  if (!videoElement.value) {
+    return
+  }
+
+  emit(
+    'preview-ready-change',
+    (videoElement.value.videoWidth > 0 && videoElement.value.videoHeight > 0) ||
+      videoElement.value.readyState >= 2
+  )
 }
 
 defineExpose({
