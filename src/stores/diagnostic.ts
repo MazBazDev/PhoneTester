@@ -40,6 +40,16 @@ const buildSteps = (): DiagnosticSessionStep[] =>
     guidedState: test.mode === 'guided' ? buildGuidedState(test) : null
   }))
 
+const matchesCurrentStepSchema = (session: DiagnosticSession) => {
+  const expectedTestIds = buildSteps().map((step) => step.testId)
+  const actualTestIds = session.steps.map((step) => step.testId)
+
+  return (
+    expectedTestIds.length === actualTestIds.length &&
+    expectedTestIds.every((testId, index) => actualTestIds[index] === testId)
+  )
+}
+
 const buildSession = (): DiagnosticSession => ({
   id: generateSessionId(),
   status: 'draft',
@@ -90,7 +100,18 @@ export const useDiagnosticStore = defineStore('diagnostic', () => {
     }
 
     if (rawSession) {
-      activeSession.value = JSON.parse(rawSession) as DiagnosticSession
+      const parsedSession = JSON.parse(rawSession) as DiagnosticSession
+
+      if (matchesCurrentStepSchema(parsedSession)) {
+        activeSession.value = parsedSession
+      } else {
+        activeSession.value = null
+        try {
+          window.localStorage.removeItem(STORAGE_KEY)
+        } catch {
+          // Ignore stale storage cleanup failures.
+        }
+      }
     }
 
     hydrated.value = true
@@ -182,6 +203,22 @@ export const useDiagnosticStore = defineStore('diagnostic', () => {
     }
 
     return session.steps[currentIndex + 1] ?? null
+  }
+
+  const getPreviousStep = (sessionId: string, testId: string) => {
+    const session = getSessionById(sessionId)
+
+    if (!session) {
+      return null
+    }
+
+    const currentIndex = session.steps.findIndex((step) => step.testId === testId)
+
+    if (currentIndex <= 0) {
+      return null
+    }
+
+    return session.steps[currentIndex - 1] ?? null
   }
 
   const getFirstIncompleteStep = (sessionId: string) => {
@@ -422,6 +459,23 @@ export const useDiagnosticStore = defineStore('diagnostic', () => {
     return result
   }
 
+  const resetStep = (sessionId: string, testId: string) => {
+    const session = getSessionById(sessionId)
+    const definition = getTestDefinition(testId)
+    const step = getStepByTestId(sessionId, testId)
+
+    if (!session || !definition || !step) {
+      return
+    }
+
+    step.status = 'pending'
+    step.result = null
+    step.guidedState = definition.mode === 'guided' ? buildGuidedState(definition) : null
+
+    updateSessionMeta(session)
+    persist()
+  }
+
   const resetSession = () => {
     if (activeSession.value) {
       clearSessionMedia(activeSession.value.id)
@@ -448,6 +502,7 @@ export const useDiagnosticStore = defineStore('diagnostic', () => {
     getCurrentGuidedSubStep,
     getFirstIncompleteStep,
     getNextStep,
+    getPreviousStep,
     getSessionById,
     getStepByTestId,
     getTestDefinition,
@@ -460,6 +515,7 @@ export const useDiagnosticStore = defineStore('diagnostic', () => {
     startGuidedTest,
     startSession,
     resetSession,
+    resetStep,
     testDefinitions,
     updateGuidedMetrics
   }

@@ -16,7 +16,7 @@ describe('diagnostic store', () => {
     const session = store.startSession()
 
     expect(session.id).toBe('session-1')
-    expect(session.steps).toHaveLength(13)
+    expect(session.steps).toHaveLength(11)
     expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.steps).toHaveLength(6)
     expect(JSON.parse(localStorage.getItem('phone-tester.active-session') || '{}').id).toBe('session-1')
   })
@@ -65,9 +65,7 @@ describe('diagnostic store', () => {
             }
           },
           { testId: 'microphone', status: 'pending', result: null, guidedState: { phase: 'idle', startedAt: null, currentStepIndex: 0, steps: [{ id: 'microphone-live', label: 'Micro live', instruction: 'step', status: 'pending', response: null }], metrics: { supported: true, permissionState: 'unknown', streamOpened: false, level: 0, peakLevel: 0, soundDetected: false }, userVerdict: null } },
-          { testId: 'camera-rear', status: 'pending', result: null, guidedState: { phase: 'idle', startedAt: null, currentStepIndex: 0, steps: [{ id: 'rear-live', label: 'Flux arriere', instruction: 'step', status: 'pending', response: null }], metrics: { supported: true, permissionState: 'unknown', streamOpened: false, captureSucceeded: false, capturePreviewAvailable: false }, userVerdict: null } },
-          { testId: 'camera-front', status: 'pending', result: null, guidedState: { phase: 'idle', startedAt: null, currentStepIndex: 0, steps: [{ id: 'front-live', label: 'Flux avant', instruction: 'step', status: 'pending', response: null }], metrics: { supported: true, permissionState: 'unknown', streamOpened: false, captureSucceeded: false, capturePreviewAvailable: false }, userVerdict: null } },
-          { testId: 'autofocus', status: 'pending', result: null, guidedState: { phase: 'idle', startedAt: null, currentStepIndex: 0, steps: [{ id: 'autofocus-near', label: 'Pres', instruction: 'step', status: 'pending', response: null }, { id: 'autofocus-far', label: 'Loin', instruction: 'step', status: 'pending', response: null }], metrics: { supported: true, permissionState: 'unknown', streamOpened: false, nearValidated: false, farValidated: false }, userVerdict: null } }
+          { testId: 'camera', status: 'pending', result: null, guidedState: { phase: 'idle', startedAt: null, currentStepIndex: 0, steps: [{ id: 'rear-capture', label: 'Objectifs arriere', instruction: 'step', status: 'pending', response: null }, { id: 'autofocus-near', label: 'Autofocus proche', instruction: 'step', status: 'pending', response: null }, { id: 'autofocus-far', label: 'Autofocus loin', instruction: 'step', status: 'pending', response: null }, { id: 'front-capture', label: 'Camera avant', instruction: 'step', status: 'pending', response: null }], metrics: { supported: true, permissionState: 'unknown', streamOpened: false, rearAvailableDeviceIds: [], rearCapturedDeviceIds: [], nearValidated: false, farValidated: false, frontCaptureSucceeded: false }, userVerdict: null } }
         ]
       })
     )
@@ -87,7 +85,7 @@ describe('diagnostic store', () => {
     await store.runTest(session.id, 'device-info')
 
     expect(store.getStepByTestId(session.id, 'device-info')?.result?.testId).toBe('device-info')
-    expect(store.sessionProgress).toBe(8)
+    expect(store.sessionProgress).toBe(9)
   })
 
   it('finalizes compass and gps guided tests', () => {
@@ -129,41 +127,26 @@ describe('diagnostic store', () => {
     expect(store.getStepByTestId(session.id, 'gps')?.result?.status).toBe('pass')
   })
 
-  it('finalizes rear and front camera guided tests', () => {
+  it('finalizes the unified camera guided test', () => {
     const store = useDiagnosticStore()
     const session = store.startSession()
 
-    store.startGuidedTest(session.id, 'camera-rear')
-    store.updateGuidedMetrics(session.id, 'camera-rear', {
+    store.startGuidedTest(session.id, 'camera')
+    store.updateGuidedMetrics(session.id, 'camera', {
       supported: true,
       permissionState: 'granted',
       streamOpened: true,
-      activeDeviceLabel: 'Back Camera',
-      availableDeviceCount: 3,
-      capturedDeviceIds: ['rear-1', 'rear-2', 'rear-3'],
-      captureSucceeded: true,
-      capturePreviewAvailable: true
+      rearAvailableDeviceIds: ['rear-1', 'rear-2', 'rear-3'],
+      rearCapturedDeviceIds: ['rear-1', 'rear-2', 'rear-3'],
+      nearValidated: true,
+      farValidated: true,
+      frontCaptureSucceeded: true
     })
-    store.moveGuidedTestToConfirm(session.id, 'camera-rear')
-    store.setGuidedUserVerdict(session.id, 'camera-rear', 'pass')
-    store.finalizeGuidedTest(session.id, 'camera-rear')
+    store.moveGuidedTestToConfirm(session.id, 'camera')
+    store.setGuidedUserVerdict(session.id, 'camera', 'pass')
+    store.finalizeGuidedTest(session.id, 'camera')
 
-    store.startGuidedTest(session.id, 'camera-front')
-    store.updateGuidedMetrics(session.id, 'camera-front', {
-      supported: true,
-      permissionState: 'granted',
-      streamOpened: true,
-      activeDeviceLabel: 'Front Camera',
-      availableDeviceCount: 1,
-      captureSucceeded: true,
-      capturePreviewAvailable: true
-    })
-    store.moveGuidedTestToConfirm(session.id, 'camera-front')
-    store.setGuidedUserVerdict(session.id, 'camera-front', 'pass')
-    store.finalizeGuidedTest(session.id, 'camera-front')
-
-    expect(store.getStepByTestId(session.id, 'camera-rear')?.result?.status).toBe('pass')
-    expect(store.getStepByTestId(session.id, 'camera-front')?.result?.status).toBe('pass')
+    expect(store.getStepByTestId(session.id, 'camera')?.result?.status).toBe('pass')
   })
 
   it('finalizes microphone guided test', () => {
@@ -202,28 +185,48 @@ describe('diagnostic store', () => {
     expect(store.getStepByTestId(session.id, 'multitouch')?.result?.status).toBe('pass')
   })
 
-  it('progresses and finalizes autofocus guided test', () => {
+  it('progresses through the unified camera guided substeps', () => {
     const store = useDiagnosticStore()
     const session = store.startSession()
 
-    store.startGuidedTest(session.id, 'autofocus')
-    store.updateGuidedMetrics(session.id, 'autofocus', {
+    store.startGuidedTest(session.id, 'camera')
+    store.updateGuidedMetrics(session.id, 'camera', {
       supported: true,
       permissionState: 'granted',
       streamOpened: true,
-      activeDeviceLabel: 'Back Camera',
+      rearAvailableDeviceIds: ['rear-1'],
+      rearCapturedDeviceIds: ['rear-1']
+    })
+    store.completeGuidedStep(session.id, 'camera')
+    store.updateGuidedMetrics(session.id, 'camera', {
       nearValidated: true
     })
-    store.completeGuidedStep(session.id, 'autofocus')
-    store.updateGuidedMetrics(session.id, 'autofocus', {
+    store.completeGuidedStep(session.id, 'camera')
+    store.updateGuidedMetrics(session.id, 'camera', {
       farValidated: true
     })
-    store.completeGuidedStep(session.id, 'autofocus')
-    store.setGuidedUserVerdict(session.id, 'autofocus', 'pass')
-    store.finalizeGuidedTest(session.id, 'autofocus')
+    store.completeGuidedStep(session.id, 'camera')
+    store.updateGuidedMetrics(session.id, 'camera', {
+      frontCaptureSucceeded: true
+    })
+    store.setGuidedUserVerdict(session.id, 'camera', 'pass')
+    store.finalizeGuidedTest(session.id, 'camera')
 
-    expect(store.getCurrentGuidedSubStep(session.id, 'autofocus')?.id).toBe('autofocus-far')
-    expect(store.getStepByTestId(session.id, 'autofocus')?.result?.status).toBe('pass')
+    expect(store.getCurrentGuidedSubStep(session.id, 'camera')?.id).toBe('front-capture')
+    expect(store.getStepByTestId(session.id, 'camera')?.result?.status).toBe('pass')
+  })
+
+  it('resets an individual completed step', async () => {
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    await store.runTest(session.id, 'device-info')
+    expect(store.getStepByTestId(session.id, 'device-info')?.result).not.toBeNull()
+
+    store.resetStep(session.id, 'device-info')
+
+    expect(store.getStepByTestId(session.id, 'device-info')?.result).toBeNull()
+    expect(store.getStepByTestId(session.id, 'device-info')?.status).toBe('pending')
   })
 
   it('resets the persisted session', () => {

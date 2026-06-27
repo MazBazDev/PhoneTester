@@ -8,9 +8,7 @@ import { useAccelerometerTest } from '../composables/useAccelerometerTest'
 import { useGyroscopeTest } from '../composables/useGyroscopeTest'
 import { useCompassTest } from '../composables/useCompassTest'
 import { useGpsTest } from '../composables/useGpsTest'
-import { useCameraRearTest } from '../composables/useCameraRearTest'
-import { useCameraFrontTest } from '../composables/useCameraFrontTest'
-import { useAutofocusTest } from '../composables/useAutofocusTest'
+import { useCameraTest } from '../composables/useCameraTest'
 import { useMicrophoneTest } from '../composables/useMicrophoneTest'
 
 export const diagnosticTests: DiagnosticTestDefinition[] = [
@@ -24,9 +22,7 @@ export const diagnosticTests: DiagnosticTestDefinition[] = [
   useCompassTest(),
   useGpsTest(),
   useMicrophoneTest(),
-  useCameraRearTest(),
-  useCameraFrontTest(),
-  useAutofocusTest()
+  useCameraTest()
 ]
 
 export const diagnosticTestMap = Object.fromEntries(diagnosticTests.map((test) => [test.id, test])) as Record<

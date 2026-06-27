@@ -62,7 +62,7 @@ const VISIBLE_TEST_GROUPS: VisibleTestGroup[] = [
     id: 'camera',
     label: 'Camera',
     description: 'On verifie les cameras, la mise au point et les prises de vue utiles.',
-    testIds: ['camera-rear', 'autofocus', 'camera-front']
+    testIds: ['camera']
   },
   {
     id: 'location',
@@ -98,18 +98,6 @@ const TEST_COPY: Record<string, ProductTestCopy> = {
     description: 'On verifie simplement que le micro reagit bien.'
   },
   camera: {
-    label: 'Camera',
-    description: 'On verifie les cameras, la mise au point et les prises de vue utiles.'
-  },
-  'camera-rear': {
-    label: 'Camera',
-    description: 'On verifie les cameras, la mise au point et les prises de vue utiles.'
-  },
-  'camera-front': {
-    label: 'Camera',
-    description: 'On verifie les cameras, la mise au point et les prises de vue utiles.'
-  },
-  autofocus: {
     label: 'Camera',
     description: 'On verifie les cameras, la mise au point et les prises de vue utiles.'
   },

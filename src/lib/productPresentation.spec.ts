@@ -11,7 +11,7 @@ import {
 
 describe('productPresentation', () => {
   it('maps technical test ids to simple product labels', () => {
-    expect(getProductTestCopy('camera-rear', 'Camera arriere').label).toBe('Camera')
+    expect(getProductTestCopy('camera', 'Camera').label).toBe('Camera')
     expect(getProductTestCopy('microphone', 'Microphone').label).toBe('Son')
   })
 
@@ -23,9 +23,7 @@ describe('productPresentation', () => {
     expect(getVisibleTestId('gyroscope')).toBe('movement')
     expect(getVisibleTestId('compass')).toBe('movement')
     expect(getVisibleTestId('microphone')).toBe('sound')
-    expect(getVisibleTestId('camera-rear')).toBe('camera')
-    expect(getVisibleTestId('camera-front')).toBe('camera')
-    expect(getVisibleTestId('autofocus')).toBe('camera')
+    expect(getVisibleTestId('camera')).toBe('camera')
     expect(getVisibleTestId('gps')).toBe('location')
 
     expect(getVisibleSubStepMeta('gyroscope')).toEqual({
@@ -46,9 +44,7 @@ describe('productPresentation', () => {
       { testId: 'gyroscope', result: { status: 'pass' } },
       { testId: 'compass', result: { status: 'pass' } },
       { testId: 'microphone', result: { status: 'pass' } },
-      { testId: 'camera-rear', result: { status: 'pass' } },
-      { testId: 'autofocus', result: { status: 'pass' } },
-      { testId: 'camera-front', result: { status: 'warning' } },
+      { testId: 'camera', result: { status: 'warning' } },
       { testId: 'gps', result: { status: 'pass' } }
     ] as never
 
@@ -76,9 +72,7 @@ describe('productPresentation', () => {
       { testId: 'gyroscope', result: null },
       { testId: 'compass', result: null },
       { testId: 'microphone', result: null },
-      { testId: 'camera-rear', result: null },
-      { testId: 'autofocus', result: null },
-      { testId: 'camera-front', result: null },
+      { testId: 'camera', result: null },
       { testId: 'gps', result: null }
     ] as never
 
@@ -116,9 +110,7 @@ describe('productPresentation', () => {
       { testId: 'gyroscope', result: { status: 'pass' } },
       { testId: 'compass', result: { status: 'pass' } },
       { testId: 'microphone', result: { status: 'pass' } },
-      { testId: 'camera-rear', result: { status: 'pass' } },
-      { testId: 'autofocus', result: { status: 'pass' } },
-      { testId: 'camera-front', result: { status: 'pass' } },
+      { testId: 'camera', result: { status: 'pass' } },
       { testId: 'gps', result: { status: 'pass' } }
     ] as never
 

@@ -76,6 +76,12 @@
           <PhonePreviewPanel mode="touch-intro" />
         </section>
 
+        <AppCard v-if="step.result && !screenImmersiveActive">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Test termine</p>
+          <p class="mt-2 text-base font-semibold text-slate-950">{{ productTestCopy.label }}</p>
+          <p class="mt-2 text-sm leading-6 text-slate-600">{{ step.result.summary }}</p>
+        </AppCard>
+
         <template v-if="testDefinition.mode === 'guided' && guidedState">
           <section
             v-if="props.testId === 'screen' && currentGuidedSubStep && ['active', 'confirm'].includes(guidedState.phase)"
@@ -223,19 +229,36 @@
                 :active-device-label="cameraRuntime.activeDeviceLabel.value"
                 :available-devices="selectedCameraDevices"
                 :selected-device-id="cameraActiveDeviceId"
-                :show-device-selector="showRearDeviceSelector"
-                :show-target="isAutofocusTest"
+                :show-device-selector="false"
+                :show-target="isCameraAutofocusStage"
                 :target-label="autofocusTargetLabel"
                 @switch-device="switchRearDevice"
                 @preview-ready-change="handleCameraPreviewReadyChange"
               />
 
-              <div v-if="props.testId === 'camera-rear'" class="flex items-center justify-between rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3 text-sm text-slate-600">
-                <span>
-                  {{ rearRemainingObjectiveCount === 0 ? 'Toutes les vues sont faites.' : `${rearRemainingObjectiveCount} vue restante.` }}
+              <div class="flex items-center justify-between rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3 text-sm text-slate-600">
+                <span v-if="isCameraRearStage">
+                  {{ rearRemainingObjectiveCount === 0 ? 'Tous les objectifs arriere sont verifies.' : `Objectif ${rearCurrentObjectiveIndex} sur ${rearAvailableDeviceIds.length || selectedCameraDevices.length}` }}
+                </span>
+                <span v-else-if="isCameraAutofocusNearStage">
+                  Verifie la mise au point sur un objet proche.
+                </span>
+                <span v-else-if="isCameraAutofocusFarStage">
+                  Verifie la mise au point sur un sujet plus eloigne.
+                </span>
+                <span v-else>
+                  Prends une photo avec la camera avant.
                 </span>
                 <span class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                  {{ rearCapturedDeviceIds.length }}/{{ rearAvailableDeviceIds.length || selectedCameraDevices.length }}
+                  <template v-if="isCameraRearStage">
+                    {{ rearCompletedObjectiveCount }}/{{ rearAvailableDeviceIds.length || selectedCameraDevices.length }}
+                  </template>
+                  <template v-else-if="isCameraFrontStage">
+                    {{ frontCaptureSucceeded ? 'pret' : 'a faire' }}
+                  </template>
+                  <template v-else>
+                    {{ currentGuidedSubStep?.label }}
+                  </template>
                 </span>
               </div>
             </div>
@@ -244,6 +267,18 @@
       </div>
 
       <template #actions>
+        <template v-if="step.result">
+          <AppButton v-if="previousStep" class="flex-1" variant="secondary" @click="goPrevious">
+            Precedent
+          </AppButton>
+          <AppButton class="flex-1" variant="secondary" @click="restartCurrentTest">
+            Relancer
+          </AppButton>
+          <AppButton class="flex-1" @click="goNext">
+            {{ nextStep ? 'Suivant' : 'Verdict final' }}
+          </AppButton>
+        </template>
+
         <template v-if="testDefinition.mode === 'automatic' && !step.result">
           <AppButton class="flex-1" @click="runCurrentAutomaticTest">
             Executer
@@ -363,6 +398,7 @@ const session = computed(() => store.getSessionById(props.sessionId))
 const testDefinition = computed(() => store.getTestDefinition(props.testId))
 const step = computed(() => store.getStepByTestId(props.sessionId, props.testId))
 const nextStep = computed(() => store.getNextStep(props.sessionId, props.testId))
+const previousStep = computed(() => store.getPreviousStep(props.sessionId, props.testId))
 const currentVisibleTestId = computed(() => getVisibleTestId(props.testId))
 const visibleSubStepMeta = computed(() => getVisibleSubStepMeta(props.testId))
 const visibleProgress = computed(() => getVisibleProgressModel(session.value?.steps ?? [], props.testId))
@@ -378,18 +414,16 @@ const isRotationTest = computed(() => props.testId === 'rotation')
 const isAccelerometerTest = computed(() => props.testId === 'accelerometer')
 const isGyroscopeTest = computed(() => props.testId === 'gyroscope')
 const isSensorTest = computed(() => ['compass', 'gps'].includes(props.testId))
-const isCameraCaptureTest = computed(() => ['camera-rear', 'camera-front'].includes(props.testId))
-const isAutofocusTest = computed(() => props.testId === 'autofocus')
+const isCameraTest = computed(() => props.testId === 'camera')
 const isMicrophoneTest = computed(() => props.testId === 'microphone')
 const isMultitouchTest = computed(() => props.testId === 'multitouch')
-const isMediaTest = computed(() => isCameraCaptureTest.value || isAutofocusTest.value)
+const isMediaTest = computed(() => isCameraTest.value)
 const isImmersiveGuidedTest = computed(
   () => Boolean(testDefinition.value?.mode === 'guided' && testDefinition.value?.immersive)
 )
-const supportsIssueReporting = computed(() =>
-  ['microphone', 'camera-rear', 'camera-front', 'autofocus'].includes(props.testId)
-)
+const supportsIssueReporting = computed(() => ['microphone', 'camera'].includes(props.testId))
 const subjectiveIssueReported = computed(() => guidedState.value?.userVerdict === 'warning')
+const stepCompleted = computed(() => Boolean(step.value?.result))
 const sensorMode = computed<SensorMode | null>(() => {
   if (['accelerometer', 'gyroscope', 'compass', 'gps'].includes(props.testId)) {
     return props.testId as SensorMode
@@ -407,29 +441,54 @@ const frontVideoDevices = computed(() => {
 })
 const cameraStream = computed(() => cameraRuntime.activeStream.value)
 const cameraActiveDeviceId = computed(() => cameraRuntime.activeDeviceId.value)
+const currentCameraStepId = computed(() => currentGuidedSubStep.value?.id ?? null)
+const isCameraRearStage = computed(() => currentCameraStepId.value === 'rear-capture')
+const isCameraAutofocusNearStage = computed(() => currentCameraStepId.value === 'autofocus-near')
+const isCameraAutofocusFarStage = computed(() => currentCameraStepId.value === 'autofocus-far')
+const isCameraAutofocusStage = computed(
+  () => isCameraAutofocusNearStage.value || isCameraAutofocusFarStage.value
+)
+const isCameraFrontStage = computed(() => currentCameraStepId.value === 'front-capture')
 const selectedCameraDevices = computed<CameraDeviceInfo[]>(() => {
-  if (props.testId === 'camera-front') {
+  if (isCameraFrontStage.value) {
     return frontVideoDevices.value
   }
 
   return rearVideoDevices.value
 })
-const showRearDeviceSelector = computed(
-  () => props.testId === 'camera-rear' && selectedCameraDevices.value.length > 1
-)
-const currentCaptureUrl = computed(() => getSessionCapture(props.sessionId, props.testId))
 const getMetricStringList = (value: unknown) =>
   Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
 const cameraPreviewReady = computed(() => Boolean(guidedState.value?.metrics.previewReady))
-const rearAvailableDeviceIds = computed(() => getMetricStringList(guidedState.value?.metrics.availableDeviceIds))
-const rearCapturedDeviceIds = computed(() => getMetricStringList(guidedState.value?.metrics.capturedDeviceIds))
-const rearTestedDeviceIds = computed(() => getMetricStringList(guidedState.value?.metrics.testedDeviceIds))
+const rearAvailableDeviceIds = computed(() => getMetricStringList(guidedState.value?.metrics.rearAvailableDeviceIds))
+const rearCapturedDeviceIds = computed(() => getMetricStringList(guidedState.value?.metrics.rearCapturedDeviceIds))
+const rearCurrentDeviceId = computed(() => {
+  const value = guidedState.value?.metrics.rearCurrentDeviceId
+  return typeof value === 'string' ? value : null
+})
+const frontCaptureSucceeded = computed(() => Boolean(guidedState.value?.metrics.frontCaptureSucceeded))
+const currentCaptureSlot = computed(() => {
+  if (!isCameraTest.value) {
+    return undefined
+  }
+
+  if (isCameraRearStage.value) {
+    return rearCurrentDeviceId.value ? `rear:${rearCurrentDeviceId.value}` : undefined
+  }
+
+  if (isCameraFrontStage.value) {
+    return 'front'
+  }
+
+  return undefined
+})
+const currentCaptureUrl = computed(() =>
+  getSessionCapture(props.sessionId, props.testId, currentCaptureSlot.value)
+)
 const currentRearObjectiveCaptured = computed(() =>
-  props.testId === 'camera-rear' &&
-  Boolean(cameraActiveDeviceId.value && rearCapturedDeviceIds.value.includes(cameraActiveDeviceId.value))
+  Boolean(rearCurrentDeviceId.value && rearCapturedDeviceIds.value.includes(rearCurrentDeviceId.value))
 )
 const rearAllObjectivesCaptured = computed(() => {
-  if (props.testId !== 'camera-rear') {
+  if (!isCameraTest.value) {
     return false
   }
 
@@ -440,7 +499,7 @@ const rearAllObjectivesCaptured = computed(() => {
   return availableIds.length > 0 && availableIds.every((deviceId) => rearCapturedDeviceIds.value.includes(deviceId))
 })
 const rearRemainingObjectiveCount = computed(() => {
-  if (props.testId !== 'camera-rear') {
+  if (!isCameraTest.value) {
     return 0
   }
 
@@ -450,7 +509,25 @@ const rearRemainingObjectiveCount = computed(() => {
 
   return availableIds.filter((deviceId) => !rearCapturedDeviceIds.value.includes(deviceId)).length
 })
-const currentAutofocusStepId = computed(() => currentGuidedSubStep.value?.id ?? null)
+const rearCompletedObjectiveCount = computed(() => {
+  const availableIds = rearAvailableDeviceIds.value.length > 0
+    ? rearAvailableDeviceIds.value
+    : selectedCameraDevices.value.map((device) => device.deviceId)
+
+  return availableIds.filter((deviceId) => rearCapturedDeviceIds.value.includes(deviceId)).length
+})
+const rearCurrentObjectiveIndex = computed(() => {
+  const availableIds = rearAvailableDeviceIds.value.length > 0
+    ? rearAvailableDeviceIds.value
+    : selectedCameraDevices.value.map((device) => device.deviceId)
+
+  if (!rearCurrentDeviceId.value) {
+    return availableIds.length > 0 ? 1 : 0
+  }
+
+  const index = availableIds.indexOf(rearCurrentDeviceId.value)
+  return index === -1 ? 1 : index + 1
+})
 const flaggedScreenStepIds = computed(() => {
   const value = guidedState.value?.metrics.flaggedStepIds
   return Array.isArray(value) ? value : []
@@ -466,11 +543,11 @@ const isLastGuidedSubStep = computed(() => {
   return guidedState.value.currentStepIndex >= guidedState.value.steps.length - 1
 })
 const autofocusTargetLabel = computed(() => {
-  if (currentAutofocusStepId.value === 'autofocus-near') {
+  if (isCameraAutofocusNearStage.value) {
     return 'Cible proche'
   }
 
-  if (currentAutofocusStepId.value === 'autofocus-far') {
+  if (isCameraAutofocusFarStage.value) {
     return 'Cible loin'
   }
 
@@ -670,6 +747,10 @@ const instructionText = computed(() => {
     return 'Parle, souffle ou tapote pres du micro pour faire reagir le signal.'
   }
 
+  if (props.testId === 'camera') {
+    return 'Verifie les objectifs arriere, la mise au point puis la camera avant.'
+  }
+
   return currentGuidedSubStep.value?.instruction ?? 'Suis simplement la consigne a l’ecran.'
 })
 
@@ -686,43 +767,39 @@ const launchButtonLabel = computed(() => {
 })
 
 const mediaPrimaryActionLabel = computed(() => {
-  if (isCameraCaptureTest.value) {
+  if (isCameraTest.value) {
     if (!cameraPreviewReady.value) {
       return 'Initialisation...'
     }
 
-    if (props.testId === 'camera-rear' && currentRearObjectiveCaptured.value && !rearAllObjectivesCaptured.value) {
-      return 'Changer d’objectif'
+    if (isCameraRearStage.value) {
+      if (!currentCaptureUrl.value) {
+        return 'Prendre une photo'
+      }
+
+      return rearAllObjectivesCaptured.value ? 'Continuer' : 'Objectif suivant'
     }
 
-    if (props.testId === 'camera-rear' && rearAllObjectivesCaptured.value) {
+    if (isCameraAutofocusNearStage.value) {
+      return 'Etape suivante'
+    }
+
+    if (isCameraAutofocusFarStage.value) {
       return 'Continuer'
     }
 
-    return currentCaptureUrl.value ? 'Valider la photo' : 'Prendre une photo'
-  }
-
-  if (currentAutofocusStepId.value === 'autofocus-near') {
-    return 'Etape suivante'
-  }
-
-  if (currentAutofocusStepId.value === 'autofocus-far') {
-    return 'Continuer'
+    return currentCaptureUrl.value ? 'Terminer le test' : 'Prendre une photo'
   }
 
   return 'Continuer'
 })
 
 const mediaPrimaryActionDisabled = computed(() => {
-  if (!isCameraCaptureTest.value) {
+  if (!isCameraTest.value) {
     return false
   }
 
-  if (!cameraPreviewReady.value) {
-    return true
-  }
-
-  if (props.testId === 'camera-rear' && currentRearObjectiveCaptured.value && !rearAllObjectivesCaptured.value) {
+  if ((isCameraRearStage.value || isCameraFrontStage.value) && !cameraPreviewReady.value) {
     return true
   }
 
@@ -821,7 +898,7 @@ const trackRotationUiSample = () => {
     guidedState.value?.phase === 'active'
   ) {
     stopRotationUiTracking()
-    void finalizeAndAdvance('pass')
+    void finalizeCurrentTest('pass')
   }
 }
 
@@ -873,11 +950,7 @@ const updateFromSensorError = (error: SensorError) => {
 }
 
 const runCurrentAutomaticTest = async () => {
-  const result = await store.runTest(props.sessionId, props.testId)
-
-  if (result) {
-    await navigateNext()
-  }
+  await store.runTest(props.sessionId, props.testId)
 }
 
 const enterScreenFullscreen = async () => {
@@ -990,7 +1063,7 @@ const navigateNext = async () => {
   }
 }
 
-const finalizeAndAdvance = async (verdict?: DiagnosticGuidedUserVerdict | null) => {
+const finalizeCurrentTest = async (verdict?: DiagnosticGuidedUserVerdict | null) => {
   stopActiveRuntimes()
 
   if (verdict !== undefined) {
@@ -998,7 +1071,6 @@ const finalizeAndAdvance = async (verdict?: DiagnosticGuidedUserVerdict | null) 
   }
 
   store.finalizeGuidedTest(props.sessionId, props.testId)
-  await navigateNext()
 }
 
 const syncCameraMetrics = (overrides?: Record<string, string | number | boolean | null | string[]>) => {
@@ -1008,15 +1080,58 @@ const syncCameraMetrics = (overrides?: Record<string, string | number | boolean 
     streamOpened: cameraRuntime.streamActive.value,
     activeDeviceLabel: cameraRuntime.activeDeviceLabel.value,
     activeDeviceId: cameraRuntime.activeDeviceId.value,
-    availableDeviceCount: selectedCameraDevices.value.length,
     ...overrides
   })
 }
 
-const launchCameraTest = async () => {
-  if (isCameraCaptureTest.value) {
-    clearSessionCapture(props.sessionId, props.testId)
+const getNextRearObjectiveId = () => {
+  const availableIds = rearAvailableDeviceIds.value.length > 0
+    ? rearAvailableDeviceIds.value
+    : rearVideoDevices.value.map((device) => device.deviceId)
+
+  return availableIds.find((deviceId) => !rearCapturedDeviceIds.value.includes(deviceId)) ?? availableIds[0] ?? null
+}
+
+const ensureCameraStageStream = async () => {
+  if (!isCameraTest.value || guidedState.value?.phase !== 'active') {
+    return
   }
+
+  const desiredDeviceId = (() => {
+    if (isCameraFrontStage.value) {
+      return frontVideoDevices.value[0]?.deviceId ?? null
+    }
+
+    return rearCurrentDeviceId.value ?? getNextRearObjectiveId()
+  })()
+
+  let stream = cameraRuntime.activeStream.value
+
+  if (desiredDeviceId) {
+    if (cameraRuntime.activeDeviceId.value !== desiredDeviceId || !stream) {
+      stream = await cameraRuntime.switchDevice(desiredDeviceId)
+    }
+  } else if (!stream) {
+    stream = await cameraRuntime.startStream({
+      facingMode: isCameraFrontStage.value ? 'user' : 'environment'
+    })
+  }
+
+  syncCameraMetrics({
+    streamOpened: Boolean(stream),
+    activeDeviceId: cameraRuntime.activeDeviceId.value,
+    activeDeviceLabel: cameraRuntime.activeDeviceLabel.value,
+    previewReady: false,
+    rearAvailableDeviceIds: rearVideoDevices.value.map((device) => device.deviceId),
+    rearCurrentDeviceId:
+      isCameraRearStage.value || isCameraAutofocusStage.value
+        ? cameraRuntime.activeDeviceId.value
+        : rearCurrentDeviceId.value
+  })
+}
+
+const launchCameraTest = async () => {
+  clearSessionCapture(props.sessionId, props.testId)
 
   const permission = await cameraRuntime.requestPermission()
 
@@ -1024,32 +1139,19 @@ const launchCameraTest = async () => {
     permissionState: permission,
     previewReady: false,
     activeDeviceId: null,
-    availableDeviceIds: selectedCameraDevices.value.map((device) => device.deviceId)
+    rearAvailableDeviceIds: rearVideoDevices.value.map((device) => device.deviceId),
+    rearCapturedDeviceIds: [],
+    rearCurrentDeviceId: rearVideoDevices.value[0]?.deviceId ?? null,
+    nearValidated: false,
+    farValidated: false,
+    frontCaptureSucceeded: false
   })
 
   if (permission === 'denied' || permission === 'not_supported') {
     return
   }
 
-  const stream = await cameraRuntime.startStream({
-    facingMode: props.testId === 'camera-front' ? 'user' : 'environment'
-  })
-
-  syncCameraMetrics({
-    streamOpened: Boolean(stream),
-    activeDeviceId: cameraRuntime.activeDeviceId.value,
-    activeDeviceLabel: cameraRuntime.activeDeviceLabel.value,
-    previewReady: false,
-    availableDeviceIds: selectedCameraDevices.value.map((device) => device.deviceId),
-    ...(props.testId === 'camera-rear'
-      ? {
-          testedDeviceIds: [],
-          capturedDeviceIds: [],
-          captureSucceeded: false,
-          capturePreviewAvailable: false
-        }
-      : {})
-  })
+  await ensureCameraStageStream()
 }
 
 const launchMicrophoneTest = async () => {
@@ -1147,7 +1249,7 @@ const launchGuidedTest = async () => {
             guidedState.value?.phase === 'active'
           ) {
             sensorRuntime.stopListening()
-            void finalizeAndAdvance('pass')
+            void finalizeCurrentTest('pass')
           }
         },
         updateFromSensorError
@@ -1204,7 +1306,7 @@ const launchGuidedTest = async () => {
             guidedState.value?.phase === 'active'
           ) {
             sensorRuntime.stopListening()
-            void finalizeAndAdvance('pass')
+            void finalizeCurrentTest('pass')
           }
         },
         updateFromSensorError
@@ -1275,7 +1377,7 @@ const launchGuidedTest = async () => {
 
         if (compass.hasHeading && guidedState.value?.phase === 'active') {
           sensorRuntime.stopListening()
-          void finalizeAndAdvance('pass')
+          void finalizeCurrentTest('pass')
         }
         return
       }
@@ -1302,7 +1404,7 @@ const launchGuidedTest = async () => {
 
       if (guidedState.value?.phase === 'active') {
         sensorRuntime.stopListening()
-        void finalizeAndAdvance('pass')
+        void finalizeCurrentTest('pass')
       }
       },
       updateFromSensorError
@@ -1314,67 +1416,45 @@ const launchGuidedTest = async () => {
 
 const captureCameraFrame = () => {
   const dataUrl = cameraRuntime.captureFrame(cameraPanelRef.value?.videoElement ?? null)
-  const activeDeviceId = cameraActiveDeviceId.value
-
-  if (props.testId === 'camera-rear' && !activeDeviceId) {
-    syncCameraMetrics({
-      captureSucceeded: false,
-      capturePreviewAvailable: false
-    })
-    return
-  }
 
   if (!dataUrl) {
+    return
+  }
+
+  if (!isCameraTest.value) {
+    return
+  }
+
+  if (isCameraRearStage.value) {
+    const activeDeviceId = rearCurrentDeviceId.value ?? cameraActiveDeviceId.value
+
+    if (!activeDeviceId) {
+      return
+    }
+
+    setSessionCapture(props.sessionId, props.testId, dataUrl, `rear:${activeDeviceId}`)
     syncCameraMetrics({
-      captureSucceeded: false,
-      capturePreviewAvailable: false
+      rearCapturedDeviceIds: Array.from(new Set([...rearCapturedDeviceIds.value, activeDeviceId]))
     })
     return
   }
 
-  setSessionCapture(props.sessionId, props.testId, dataUrl)
-
-  const testedDeviceIds =
-    props.testId === 'camera-rear' && activeDeviceId
-      ? Array.from(new Set([...rearTestedDeviceIds.value, activeDeviceId]))
-      : rearTestedDeviceIds.value
-  const capturedDeviceIds =
-    props.testId === 'camera-rear' && activeDeviceId
-      ? Array.from(new Set([...rearCapturedDeviceIds.value, activeDeviceId]))
-      : rearCapturedDeviceIds.value
-  const availableDeviceIds =
-    props.testId === 'camera-rear'
-      ? selectedCameraDevices.value.map((device) => device.deviceId)
-      : rearAvailableDeviceIds.value
-
-  syncCameraMetrics({
-    captureSucceeded: true,
-    capturePreviewAvailable: true,
-    ...(props.testId === 'camera-rear'
-      ? {
-          testedDeviceIds,
-          capturedDeviceIds,
-          availableDeviceIds
-        }
-      : {})
-  })
+  if (isCameraFrontStage.value) {
+    setSessionCapture(props.sessionId, props.testId, dataUrl, 'front')
+    syncCameraMetrics({
+      frontCaptureSucceeded: true
+    })
+  }
 }
 
 const switchRearDevice = async (deviceId: string) => {
-  if (props.testId !== 'camera-rear') {
-    return
-  }
-
-  clearSessionCapture(props.sessionId, props.testId)
   const stream = await cameraRuntime.switchDevice(deviceId)
   syncCameraMetrics({
     streamOpened: Boolean(stream),
     activeDeviceId: cameraRuntime.activeDeviceId.value,
     activeDeviceLabel: cameraRuntime.activeDeviceLabel.value,
     previewReady: false,
-    capturePreviewAvailable: false,
-    captureSucceeded: rearAllObjectivesCaptured.value,
-    availableDeviceIds: selectedCameraDevices.value.map((device) => device.deviceId)
+    rearCurrentDeviceId: deviceId
   })
 }
 
@@ -1388,8 +1468,8 @@ const handleCameraPreviewReadyChange = (ready: boolean) => {
   })
 }
 
-const validateAutofocusStep = () => {
-  if (currentAutofocusStepId.value === 'autofocus-near') {
+const validateAutofocusStep = async () => {
+  if (isCameraAutofocusNearStage.value) {
     store.updateGuidedMetrics(props.sessionId, props.testId, {
       nearValidated: true
     })
@@ -1397,12 +1477,12 @@ const validateAutofocusStep = () => {
     return
   }
 
-  if (currentAutofocusStepId.value === 'autofocus-far') {
+  if (isCameraAutofocusFarStage.value) {
     store.updateGuidedMetrics(props.sessionId, props.testId, {
       farValidated: true
     })
     store.completeGuidedStep(props.sessionId, props.testId)
-    void finalizeAndAdvance()
+    await ensureCameraStageStream()
   }
 }
 
@@ -1440,7 +1520,7 @@ const advanceScreenStep = () => {
   }
 
   if (isLastGuidedSubStep.value) {
-    void finalizeAndAdvance()
+    void finalizeCurrentTest()
     return
   }
 
@@ -1452,7 +1532,7 @@ const finishTouchCollection = (mode: 'auto' | 'gesture') => {
     completedAutomatically: mode === 'auto',
     completedByGesture: mode === 'gesture'
   })
-  void finalizeAndAdvance(mode === 'auto' ? 'pass' : 'warning')
+  void finalizeCurrentTest(mode === 'auto' ? 'pass' : 'warning')
 }
 
 const trackTouchGrid = ({ cellIds }: { cellIds: string[] }) => {
@@ -1488,16 +1568,16 @@ const trackMultitouchPad = ({ activeTouches, maxTouches }: { activeTouches: numb
   })
 
   if (maxTouches >= 3 && guidedState.value?.phase === 'active') {
-    void finalizeAndAdvance('pass')
+    void finalizeCurrentTest('pass')
   }
 }
 
 const finishMultitouchCollection = (verdict: DiagnosticGuidedUserVerdict) => {
-  void finalizeAndAdvance(verdict)
+  void finalizeCurrentTest(verdict)
 }
 
 const finishSensorCollection = (verdict: DiagnosticGuidedUserVerdict) => {
-  void finalizeAndAdvance(verdict)
+  void finalizeCurrentTest(verdict)
 }
 
 const finishMicrophoneCollection = () => {
@@ -1507,43 +1587,91 @@ const finishMicrophoneCollection = () => {
     peakLevel: microphoneRuntime.peakLevel.value,
     soundDetected: microphoneRuntime.soundDetected.value
   })
-  void finalizeAndAdvance()
+  void finalizeCurrentTest()
 }
 
-const handleMediaPrimaryAction = () => {
-  if (isCameraCaptureTest.value) {
+const handleMediaPrimaryAction = async () => {
+  if (!isCameraTest.value) {
+    return
+  }
+
+  if (isCameraRearStage.value) {
     if (!cameraPreviewReady.value) {
       return
     }
 
-    if (props.testId === 'camera-rear' && currentRearObjectiveCaptured.value && !rearAllObjectivesCaptured.value) {
-      return
-    }
-
-    if (!currentCaptureUrl.value || (props.testId === 'camera-rear' && !currentRearObjectiveCaptured.value)) {
+    if (!currentCaptureUrl.value) {
       captureCameraFrame()
       return
     }
 
-    if (props.testId === 'camera-rear' && !rearAllObjectivesCaptured.value) {
+    if (!rearAllObjectivesCaptured.value) {
+      const nextDeviceId = getNextRearObjectiveId()
+
+      if (nextDeviceId) {
+        await switchRearDevice(nextDeviceId)
+      }
+
       return
     }
 
-    if (props.testId === 'camera-rear') {
-      void finalizeAndAdvance()
-      return
-    }
-
-    void finalizeAndAdvance()
+    store.completeGuidedStep(props.sessionId, props.testId)
     return
   }
 
-  validateAutofocusStep()
+  if (isCameraAutofocusStage.value) {
+    await validateAutofocusStep()
+    return
+  }
+
+  if (isCameraFrontStage.value) {
+    if (!cameraPreviewReady.value) {
+      return
+    }
+
+    if (!currentCaptureUrl.value) {
+      captureCameraFrame()
+      return
+    }
+
+    await finalizeCurrentTest()
+  }
 }
 
 const goNext = async () => {
   stopActiveRuntimes()
   await navigateNext()
+}
+
+const goPrevious = async () => {
+  if (!previousStep.value) {
+    return
+  }
+
+  stopActiveRuntimes()
+  await router.push({
+    name: 'diagnostic-auto-test',
+    params: {
+      sessionId: props.sessionId,
+      testId: previousStep.value.testId
+    }
+  })
+}
+
+const restartCurrentTest = async () => {
+  stopActiveRuntimes()
+  clearSessionCapture(props.sessionId, props.testId)
+  store.resetStep(props.sessionId, props.testId)
+  await nextTick()
+
+  if (testDefinition.value?.mode === 'automatic') {
+    await runCurrentAutomaticTest()
+    return
+  }
+
+  if (testDefinition.value?.mode === 'guided') {
+    await launchGuidedTest()
+  }
 }
 
 const quitDiagnostic = async () => {
@@ -1612,6 +1740,18 @@ watch(
       { persist: false }
     )
   }
+)
+
+watch(
+  () => [props.sessionId, props.testId, currentCameraStepId.value, guidedState.value?.phase] as const,
+  ([, testId, stepId, phase]) => {
+    if (testId !== 'camera' || phase !== 'active' || !stepId) {
+      return
+    }
+
+    void ensureCameraStageStream()
+  },
+  { immediate: true }
 )
 
 watch(

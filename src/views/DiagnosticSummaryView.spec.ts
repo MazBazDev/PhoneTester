@@ -23,17 +23,20 @@ describe('DiagnosticSummaryView', () => {
     store.setGuidedUserVerdict(session.id, 'screen', 'pass')
     store.finalizeGuidedTest(session.id, 'screen')
 
-    store.startGuidedTest(session.id, 'camera-front')
-    store.updateGuidedMetrics(session.id, 'camera-front', {
+    store.startGuidedTest(session.id, 'camera')
+    store.updateGuidedMetrics(session.id, 'camera', {
       supported: true,
       permissionState: 'granted',
       streamOpened: true,
-      captureSucceeded: false,
-      capturePreviewAvailable: false
+      rearAvailableDeviceIds: ['rear-1'],
+      rearCapturedDeviceIds: [],
+      nearValidated: false,
+      farValidated: false,
+      frontCaptureSucceeded: false
     })
-    store.moveGuidedTestToConfirm(session.id, 'camera-front')
-    store.setGuidedUserVerdict(session.id, 'camera-front', 'warning')
-    store.finalizeGuidedTest(session.id, 'camera-front')
+    store.moveGuidedTestToConfirm(session.id, 'camera')
+    store.setGuidedUserVerdict(session.id, 'camera', 'warning')
+    store.finalizeGuidedTest(session.id, 'camera')
 
     const router = createRouter({
       history: createMemoryHistory(),
