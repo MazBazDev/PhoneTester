@@ -30,11 +30,11 @@ const buildRotationStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'failed'
   }
 
-  if (hasPortrait && hasLandscape && state.userVerdict === 'pass') {
-    return 'pass'
+  if (state.userVerdict === 'warning') {
+    return 'warning'
   }
 
-  return 'warning'
+  return hasPortrait && hasLandscape ? 'pass' : 'warning'
 }
 
 export const useRotationTest = (): DiagnosticTestDefinition => ({

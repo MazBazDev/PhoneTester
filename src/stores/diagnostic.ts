@@ -392,7 +392,11 @@ export const useDiagnosticStore = defineStore('diagnostic', () => {
     persist()
   }
 
-  const setGuidedUserVerdict = (sessionId: string, testId: string, verdict: DiagnosticGuidedUserVerdict) => {
+  const setGuidedUserVerdict = (
+    sessionId: string,
+    testId: string,
+    verdict: DiagnosticGuidedUserVerdict | null
+  ) => {
     const context = getGuidedContext(sessionId, testId)
 
     if (!context) {

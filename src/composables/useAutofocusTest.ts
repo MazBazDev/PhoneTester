@@ -32,11 +32,11 @@ const buildAutofocusStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'failed'
   }
 
-  if (nearValidated && farValidated && state.userVerdict === 'pass') {
-    return 'pass'
+  if (state.userVerdict === 'warning') {
+    return 'warning'
   }
 
-  return 'warning'
+  return nearValidated && farValidated ? 'pass' : 'warning'
 }
 
 export const useAutofocusTest = (): DiagnosticTestDefinition => ({
@@ -79,7 +79,7 @@ export const useAutofocusTest = (): DiagnosticTestDefinition => ({
     testId: 'autofocus',
     status: buildAutofocusStatus(state),
     summary:
-      Boolean(state.metrics.nearValidated) && Boolean(state.metrics.farValidated) && state.userVerdict === 'pass'
+      buildAutofocusStatus(state) === 'pass'
         ? 'La mise au point a suivi correctement le parcours proche puis loin.'
         : 'Le test autofocus reste partiel, douteux ou a echoue.',
     details: buildAutofocusDetails(state),

@@ -22,11 +22,11 @@ const buildMultitouchStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'failed'
   }
 
-  if (maxTouches >= 3 && state.userVerdict === 'pass') {
-    return 'pass'
+  if (state.userVerdict === 'warning') {
+    return 'warning'
   }
 
-  return 'warning'
+  return maxTouches >= 3 ? 'pass' : 'warning'
 }
 
 export const useMultitouchTest = (): DiagnosticTestDefinition => ({
@@ -58,7 +58,7 @@ export const useMultitouchTest = (): DiagnosticTestDefinition => ({
     testId: 'multitouch',
     status: buildMultitouchStatus(state),
     summary:
-      Number(state.metrics.maxSimultaneousTouches ?? 0) >= 3 && state.userVerdict === 'pass'
+      buildMultitouchStatus(state) === 'pass'
         ? 'La detection de plusieurs doigts simultanes a bien reagi.'
         : 'Le test multitouch reste partiel, douteux ou insuffisant.',
     details: buildMultitouchDetails(state),

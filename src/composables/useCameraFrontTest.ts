@@ -34,11 +34,11 @@ const buildFrontStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'failed'
   }
 
-  if (captureSucceeded && state.userVerdict === 'pass') {
-    return 'pass'
+  if (state.userVerdict === 'warning') {
+    return 'warning'
   }
 
-  return 'warning'
+  return captureSucceeded ? 'pass' : 'warning'
 }
 
 export const useCameraFrontTest = (): DiagnosticTestDefinition => ({
@@ -77,7 +77,7 @@ export const useCameraFrontTest = (): DiagnosticTestDefinition => ({
     testId: 'camera-front',
     status: buildFrontStatus(state),
     summary:
-      Boolean(state.metrics.captureSucceeded) && state.userVerdict === 'pass'
+      buildFrontStatus(state) === 'pass'
         ? 'Le flux avant et la capture photo ont fonctionne correctement.'
         : 'Le test camera avant reste partiel, douteux ou a echoue.',
     details: buildFrontDetails(state),

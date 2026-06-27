@@ -1,117 +1,71 @@
 <template>
   <div class="space-y-4">
     <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{{ title }}</p>
-          <p class="mt-1 text-sm text-slate-600">{{ hint }}</p>
-        </div>
-        <span
-          class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
-          :class="permissionClass"
-        >
-          {{ permissionLabel }}
-        </span>
-      </div>
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{{ title }}</p>
+      <p class="mt-1 text-sm text-slate-600">{{ hint }}</p>
     </div>
 
-    <div v-if="axisEntries.length > 0" class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <div
-        v-for="entry in axisEntries"
-        :key="entry.label"
-        class="rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4"
-      >
-        <div class="flex items-center justify-between">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{{ entry.label }}</p>
-          <p class="text-lg font-bold text-slate-950">{{ formatValue(entry.value) }}</p>
-        </div>
-        <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-300/80">
-          <div
-            class="h-full rounded-full bg-slate-950 transition-all duration-150"
-            :style="{ width: `${computeWidth(entry.value)}%` }"
-          />
-        </div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.15fr_0.85fr]">
-      <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Mesures</p>
-        <div class="mt-3 divide-y divide-stone-300/80">
-          <div
-            v-for="entry in infoEntries"
-            :key="entry.label"
-            class="flex items-center justify-between gap-4 py-3"
-          >
-            <span class="text-sm text-slate-600">{{ entry.label }}</span>
-            <span class="text-sm font-semibold text-slate-950">{{ entry.value }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
-        <template v-if="variant === 'compass'">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Compas</p>
-          <div class="mt-4 flex justify-center">
-            <div class="relative h-52 w-52 rounded-full border border-stone-300/80 bg-radial-[at_50%_35%] from-white via-stone-100 to-stone-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-              <div class="absolute inset-3 rounded-full border border-stone-300/70" />
-              <div class="absolute inset-6 rounded-full border border-dashed border-stone-300/80" />
-              <div class="absolute inset-0">
-                <div class="absolute left-1/2 top-3 -translate-x-1/2 text-xs font-semibold tracking-[0.24em] text-slate-950">N</div>
-                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-semibold tracking-[0.24em] text-slate-500">S</div>
-                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-[0.24em] text-slate-500">O</div>
-                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-[0.24em] text-slate-500">E</div>
-              </div>
-              <div class="absolute inset-0">
-                <div
-                  v-for="tick in compassTicks"
-                  :key="tick"
-                  class="absolute left-1/2 top-1/2 h-[5.2rem] w-[1px] origin-bottom -translate-x-1/2 -translate-y-full bg-stone-300/90"
-                  :style="{ transform: `translateX(-50%) translateY(-100%) rotate(${tick}deg)` }"
-                />
-              </div>
-              <div class="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2">
-                <div
-                  data-testid="compass-needle"
-                  class="relative h-full w-full origin-center will-change-transform"
-                  :style="compassNeedleTransform"
-                >
-                  <div class="absolute left-1/2 top-1/2 h-[4.75rem] w-1 -translate-x-1/2 -translate-y-full rounded-full bg-slate-950 shadow-[0_0_16px_rgba(15,23,42,0.08)]" />
-                  <div class="absolute left-1/2 top-[calc(50%-5rem)] h-0 w-0 -translate-x-1/2 border-x-[8px] border-b-[16px] border-x-transparent border-b-rose-500 drop-shadow-[0_4px_10px_rgba(244,63,94,0.28)]" />
-                  <div class="absolute left-1/2 top-1/2 h-10 w-[2px] -translate-x-1/2 rounded-full bg-slate-300/90" />
-                </div>
-              </div>
-              <div data-testid="compass-pivot" class="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/60 bg-slate-950 shadow-[0_8px_18px_rgba(15,23,42,0.18)]" />
+    <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
+      <template v-if="variant === 'compass'">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Boussole</p>
+        <div class="mt-4 flex justify-center">
+          <div class="relative h-52 w-52 rounded-full border border-stone-300/80 bg-radial-[at_50%_35%] from-white via-stone-100 to-stone-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+            <div class="absolute inset-3 rounded-full border border-stone-300/70" />
+            <div class="absolute inset-6 rounded-full border border-dashed border-stone-300/80" />
+            <div class="absolute inset-0">
+              <div class="absolute left-1/2 top-3 -translate-x-1/2 text-xs font-semibold tracking-[0.24em] text-slate-950">N</div>
+              <div class="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-semibold tracking-[0.24em] text-slate-500">S</div>
+              <div class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-[0.24em] text-slate-500">O</div>
+              <div class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-[0.24em] text-slate-500">E</div>
             </div>
-          </div>
-          <p class="mt-4 text-center text-sm font-medium text-slate-700">
-            {{ compassLabel }}
-          </p>
-        </template>
-
-        <template v-else-if="variant === 'gps'">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">GPS</p>
-          <div class="mt-4 rounded-[20px] border border-stone-300 bg-stone-100 px-4 py-5">
-            <p class="text-sm text-slate-600">{{ gpsStatusLabel }}</p>
-            <p class="mt-2 text-3xl font-bold text-slate-950">{{ gpsMainValue }}</p>
-            <p class="mt-2 text-sm text-slate-500">{{ gpsSecondaryLabel }}</p>
-          </div>
-        </template>
-
-        <template v-else>
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Orientation</p>
-          <div class="mt-4 flex justify-center">
-            <div class="perspective-[1000px]">
+            <div class="absolute inset-0">
               <div
-                class="h-44 w-24 rounded-[24px] border border-stone-300 bg-linear-to-b from-stone-200 to-stone-50 p-3 transition-transform duration-150"
-                :style="phoneTransform"
+                v-for="tick in compassTicks"
+                :key="tick"
+                class="absolute left-1/2 top-1/2 h-[5.2rem] w-[1px] origin-bottom -translate-x-1/2 -translate-y-full bg-stone-300/90"
+                :style="{ transform: `translateX(-50%) translateY(-100%) rotate(${tick}deg)` }"
+              />
+            </div>
+            <div class="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2">
+              <div
+                data-testid="compass-needle"
+                class="relative h-full w-full origin-center will-change-transform"
+                :style="compassNeedleTransform"
               >
-                <div class="h-full rounded-[18px] border border-stone-300 bg-white" />
+                <div class="absolute left-1/2 top-1/2 h-[4.75rem] w-1 -translate-x-1/2 -translate-y-full rounded-full bg-slate-950 shadow-[0_0_16px_rgba(15,23,42,0.08)]" />
+                <div class="absolute left-1/2 top-[calc(50%-5rem)] h-0 w-0 -translate-x-1/2 border-x-[8px] border-b-[16px] border-x-transparent border-b-rose-500 drop-shadow-[0_4px_10px_rgba(244,63,94,0.28)]" />
+                <div class="absolute left-1/2 top-1/2 h-10 w-[2px] -translate-x-1/2 rounded-full bg-slate-300/90" />
               </div>
             </div>
+            <div data-testid="compass-pivot" class="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/60 bg-slate-950 shadow-[0_8px_18px_rgba(15,23,42,0.18)]" />
           </div>
-        </template>
-      </div>
+        </div>
+        <p class="mt-4 text-center text-sm font-medium text-slate-700">
+          {{ compassLabel }}
+        </p>
+      </template>
+
+      <template v-else-if="variant === 'gps'">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">GPS</p>
+        <div class="mt-4 rounded-[20px] border border-stone-300 bg-stone-100 px-4 py-5">
+          <p class="text-sm font-medium text-slate-700">{{ gpsStatusLabel }}</p>
+          <p class="mt-2 text-sm text-slate-500">{{ gpsSecondaryLabel }}</p>
+        </div>
+      </template>
+
+      <template v-else>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Mouvement</p>
+        <div class="mt-4 flex justify-center">
+          <div class="perspective-[1000px]">
+            <div
+              class="h-44 w-24 rounded-[24px] border border-stone-300 bg-linear-to-b from-stone-200 to-stone-50 p-3 transition-transform duration-150"
+              :style="phoneTransform"
+            >
+              <div class="h-full rounded-[18px] border border-stone-300 bg-white" />
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -146,7 +100,6 @@ const props = defineProps<{
   variant?: 'sensor' | 'compass' | 'gps'
   compassHeading?: number | null
   gpsStatusLabel?: string
-  gpsMainValue?: string
   gpsSecondaryLabel?: string
 }>()
 
@@ -179,45 +132,6 @@ const animateCompassHeading = (targetHeading: number) => {
   tick()
 }
 
-const permissionLabel = computed(() => {
-  if (props.permissionState === 'granted') {
-    return 'autorise'
-  }
-
-  if (props.permissionState === 'denied') {
-    return 'refuse'
-  }
-
-  if (props.permissionState === 'not_supported') {
-    return 'indispo'
-  }
-
-  return 'en attente'
-})
-
-const permissionClass = computed(() => {
-  if (props.permissionState === 'granted') {
-    return 'bg-emerald-100 text-emerald-700'
-  }
-
-  if (props.permissionState === 'denied') {
-    return 'bg-rose-100 text-rose-700'
-  }
-
-  if (props.permissionState === 'not_supported') {
-    return 'bg-slate-200 text-slate-700'
-  }
-
-  return 'bg-amber-100 text-amber-700'
-})
-
-const computeWidth = (value: number) => {
-  const normalized = Math.min(1, Math.abs(value) / props.maxValue)
-  return Math.max(4, normalized * 100)
-}
-
-const formatValue = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
-
 const phoneTransform = computed(
   () =>
     `rotateX(${props.phoneRotation.x}deg) rotateY(${props.phoneRotation.y}deg) rotateZ(${props.phoneRotation.z}deg)`
@@ -231,7 +145,7 @@ const compassNeedleTransform = computed(() => {
 })
 
 const compassLabel = computed(() =>
-  typeof props.compassHeading === 'number' ? `Cap nord estime: ${Math.round(props.compassHeading)}°` : 'Cap nord indisponible'
+  typeof props.compassHeading === 'number' ? 'La direction reagit bien.' : 'Direction indisponible pour le moment.'
 )
 
 watch(

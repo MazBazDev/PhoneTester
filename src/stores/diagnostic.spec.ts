@@ -140,6 +140,7 @@ describe('diagnostic store', () => {
       streamOpened: true,
       activeDeviceLabel: 'Back Camera',
       availableDeviceCount: 3,
+      capturedDeviceIds: ['rear-1', 'rear-2', 'rear-3'],
       captureSucceeded: true,
       capturePreviewAvailable: true
     })

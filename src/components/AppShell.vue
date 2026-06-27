@@ -4,15 +4,22 @@
     :class="immersive ? 'px-0 pb-0 pt-0' : 'px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4'"
   >
     <header v-if="!immersive" class="mb-4">
-      <p v-if="eyebrow" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{{ eyebrow }}</p>
-      <h1 class="mt-2 font-[var(--font-display)] text-[2rem] font-bold tracking-[-0.03em] text-slate-950">
-        {{ title }}
-      </h1>
-      <p v-if="description" class="mt-2 max-w-sm text-sm leading-6 text-slate-600">
-        {{ description }}
-      </p>
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <p v-if="eyebrow" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{{ eyebrow }}</p>
+          <h1 class="mt-2 font-[var(--font-display)] text-[2rem] font-bold tracking-[-0.03em] text-slate-950">
+            {{ title }}
+          </h1>
+          <p v-if="description" class="mt-2 max-w-sm text-sm leading-6 text-slate-600">
+            {{ description }}
+          </p>
+        </div>
+        <div v-if="$slots['header-actions']" class="shrink-0 pt-1">
+          <slot name="header-actions" />
+        </div>
+      </div>
       <div v-if="progress !== undefined" class="mt-4">
-        <ProgressBar :value="progress" />
+        <ProgressBar :model="progress" />
       </div>
     </header>
 
@@ -33,12 +40,13 @@
 
 <script setup lang="ts">
 import ProgressBar from './ProgressBar.vue'
+import type { ProgressModel } from '../lib/productPresentation'
 
 defineProps<{
   eyebrow?: string
   title: string
   description?: string
-  progress?: number
+  progress?: ProgressModel
   immersive?: boolean
 }>()
 </script>

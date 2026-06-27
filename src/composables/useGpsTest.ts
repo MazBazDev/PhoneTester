@@ -49,11 +49,11 @@ const buildGpsStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'warning'
   }
 
-  if (acquired && state.userVerdict === 'pass') {
-    return 'pass'
+  if (state.userVerdict === 'warning') {
+    return acquired ? 'warning' : 'failed'
   }
 
-  return acquired ? 'warning' : 'failed'
+  return acquired ? 'pass' : 'failed'
 }
 
 export const useGpsTest = (): DiagnosticTestDefinition => ({

@@ -1,38 +1,68 @@
 <template>
   <AppShell
-    eyebrow="Phone tester"
-    title="Diagnostic iPhone avant achat"
-    description="Rapide, local, lisible sur iPhone."
+    eyebrow="Verification iPhone"
+    title="Verifier un iPhone avant achat"
+    description="Un parcours simple pour savoir rapidement si le telephone semble en bon etat."
   >
-    <div class="space-y-3">
-      <AppCard>
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Session</p>
-            <h2 class="mt-2 text-2xl font-semibold text-slate-950">{{ store.testDefinitions.length }} tests prets</h2>
-            <p class="mt-2 text-sm text-slate-600">
-              Ecran, tactile, capteurs, GPS, micro et cameras.
-            </p>
-          </div>
-          <span class="rounded-full bg-stone-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-            Safari iPhone
-          </span>
+    <div class="space-y-4">
+      <section class="rounded-[32px] border border-stone-300/80 bg-[color:var(--color-surface)] px-5 py-6">
+        <div class="inline-flex rounded-full bg-stone-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700">
+          Achat entre particuliers
         </div>
-        <div class="mt-4 flex items-center justify-between gap-3 border-t border-stone-300/80 pt-4 text-sm text-slate-600">
-          <span>{{ resumableSession ? 'Session detectee' : 'Aucune session en cours' }}</span>
-          <span class="font-semibold text-slate-950">{{ activeSessionStepIds.size }}/{{ store.testDefinitions.length }}</span>
+        <h2 class="mt-4 max-w-[14rem] font-[var(--font-display)] text-[2.2rem] font-bold leading-[0.95] tracking-[-0.05em] text-slate-950">
+          Un avis simple avant de te decider
+        </h2>
+        <p class="mt-4 max-w-sm text-sm leading-6 text-slate-600">
+          Ecran, mouvements, son, camera, localisation. En quelques minutes, tu sais si quelque chose cloche.
+        </p>
+
+        <div class="mt-5 grid grid-cols-3 gap-2">
+          <div class="rounded-[20px] bg-stone-100 px-3 py-3">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Duree</p>
+            <p class="mt-1 text-sm font-semibold text-slate-950">2 a 3 min</p>
+          </div>
+          <div class="rounded-[20px] bg-stone-100 px-3 py-3">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Usage</p>
+            <p class="mt-1 text-sm font-semibold text-slate-950">Tres simple</p>
+          </div>
+          <div class="rounded-[20px] bg-stone-100 px-3 py-3">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Resultat</p>
+            <p class="mt-1 text-sm font-semibold text-slate-950">Verdict clair</p>
+          </div>
+        </div>
+      </section>
+
+      <AppCard>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-950" />
+            <p class="text-sm leading-6 text-slate-700">Tu suis simplement les consignes a l’ecran.</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-950" />
+            <p class="text-sm leading-6 text-slate-700">Aucun jargon technique, seulement l’essentiel pour acheter sereinement.</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-950" />
+            <p class="text-sm leading-6 text-slate-700">Le diagnostic reste sur le telephone.</p>
+          </div>
         </div>
       </AppCard>
 
-      <AppCard>
-        <div class="space-y-2">
-          <SectionListItem
-            v-for="test in store.testDefinitions"
-            :key="test.id"
-            :title="test.name"
-            :completed="Boolean(activeSessionStepIds.has(test.id))"
-            variant="compact"
-          />
+      <AppCard v-if="resumableSession" class="border border-stone-300/80 bg-[linear-gradient(180deg,rgba(250,248,244,0.96),rgba(241,237,230,0.96))]">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Verification en cours</p>
+            <p class="mt-1 text-sm leading-6 text-slate-700">
+              Tu peux reprendre la session la ou tu t’es arrete.
+            </p>
+          </div>
+          <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-[0_2px_10px_rgba(15,23,42,0.05)]">
+            {{ visibleProgress.completed }}/{{ visibleProgress.total }}
+          </span>
+        </div>
+        <div class="mt-4">
+          <ProgressBar :model="visibleProgress" />
         </div>
       </AppCard>
     </div>
@@ -40,7 +70,7 @@
     <template #actions>
       <AppButton v-if="resumableSession" class="flex-1" variant="secondary" @click="resumeSession">Reprendre</AppButton>
       <AppButton class="flex-1" @click="startDiagnostic">
-        {{ resumableSession ? 'Nouvelle session' : 'Demarrer' }}
+        {{ resumableSession ? 'Nouvelle verification' : 'Commencer' }}
       </AppButton>
     </template>
   </AppShell>
@@ -52,7 +82,8 @@ import { useRouter } from 'vue-router'
 import AppButton from '../components/AppButton.vue'
 import AppCard from '../components/AppCard.vue'
 import AppShell from '../components/AppShell.vue'
-import SectionListItem from '../components/SectionListItem.vue'
+import ProgressBar from '../components/ProgressBar.vue'
+import { getVisibleProgressModel } from '../lib/productPresentation'
 import { useDiagnosticStore } from '../stores/diagnostic'
 
 const router = useRouter()
@@ -60,8 +91,12 @@ const store = useDiagnosticStore()
 store.ensureHydrated()
 
 const resumableSession = computed(() => store.activeSession)
-const activeSessionStepIds = computed(
-  () => new Set(store.activeSession?.steps.filter((step) => step.result !== null).map((step) => step.testId) ?? [])
+const resumableStep = computed(() => {
+  const session = store.activeSession
+  return session ? store.getFirstIncompleteStep(session.id) ?? session.steps[0] ?? null : null
+})
+const visibleProgress = computed(() =>
+  getVisibleProgressModel(store.activeSession?.steps ?? [], resumableStep.value?.testId)
 )
 
 const resumeSession = async () => {

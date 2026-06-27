@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import HomeView from './HomeView.vue'
+import { useDiagnosticStore } from '../stores/diagnostic'
 
 describe('HomeView', () => {
   beforeEach(() => {
@@ -34,12 +35,42 @@ describe('HomeView', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('Demarrer')
-    expect(wrapper.text()).toContain('13 tests prets')
+    expect(wrapper.text()).toContain('Commencer')
+    expect(wrapper.text()).toContain('Un avis simple avant de te decider')
 
     await wrapper.get('button').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.name).toBe('diagnostic-auto-test')
+  })
+
+  it('renders grouped progress for a resumable session', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+
+    store.runTest(session.id, 'device-info')
+    store.startGuidedTest(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+    store.completeGuidedStep(session.id, 'screen')
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', name: 'home', component: HomeView }]
+    })
+
+    await router.push('/')
+    await router.isReady()
+
+    const wrapper = mount(HomeView, {
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    expect(wrapper.text()).toContain('Verification en cours')
+    expect(wrapper.text()).toContain('Ecran')
+    expect(wrapper.text()).toContain('Mouvements')
   })
 })

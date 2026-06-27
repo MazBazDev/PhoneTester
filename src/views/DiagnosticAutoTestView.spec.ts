@@ -58,7 +58,7 @@ describe('DiagnosticAutoTestView', () => {
     expect(store.getStepByTestId(session.id, 'gps')?.guidedState?.phase).toBe('active')
   })
 
-  it('does not auto-start the rotation test on entry', async () => {
+  it('auto-starts the rotation test on entry', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -97,12 +97,12 @@ describe('DiagnosticAutoTestView', () => {
 
     await nextTick()
 
-    expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('idle')
-    expect(wrapper.text()).toContain('Commencer')
-    expect(wrapper.text()).not.toContain('Autoriser')
+    await nextTick()
+    expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('active')
+    expect(wrapper.text()).toContain('Fais basculer l’interface')
   })
 
-  it('does not auto-start the accelerometer test on entry', async () => {
+  it('auto-starts the accelerometer test on entry', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -141,11 +141,12 @@ describe('DiagnosticAutoTestView', () => {
 
     await nextTick()
 
-    expect(store.getStepByTestId(session.id, 'accelerometer')?.guidedState?.phase).toBe('idle')
-    expect(wrapper.text()).toContain('Autoriser')
+    await nextTick()
+    await nextTick()
+    expect(store.getStepByTestId(session.id, 'accelerometer')?.guidedState?.phase).toBe('active')
   })
 
-  it('does not auto-start the gyroscope test on entry', async () => {
+  it('auto-starts the gyroscope test on entry', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -184,11 +185,12 @@ describe('DiagnosticAutoTestView', () => {
 
     await nextTick()
 
-    expect(store.getStepByTestId(session.id, 'gyroscope')?.guidedState?.phase).toBe('idle')
-    expect(wrapper.text()).toContain('Autoriser')
+    await nextTick()
+    await nextTick()
+    expect(store.getStepByTestId(session.id, 'gyroscope')?.guidedState?.phase).toBe('active')
   })
 
-  it('does not auto-start the microphone test on entry', async () => {
+  it('auto-starts the microphone test on entry', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -212,6 +214,14 @@ describe('DiagnosticAutoTestView', () => {
       ]
     })
 
+    vi.stubGlobal('navigator', {
+      mediaDevices: {}
+    })
+    Object.defineProperty(window, 'AudioContext', {
+      configurable: true,
+      value: undefined
+    })
+
     await router.push(`/diagnostic/${session.id}/auto/microphone`)
     await router.isReady()
 
@@ -227,8 +237,9 @@ describe('DiagnosticAutoTestView', () => {
 
     await nextTick()
 
-    expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('idle')
-    expect(wrapper.text()).toContain('Autoriser')
+    await nextTick()
+    await nextTick()
+    expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('active')
   })
 
   it('renders the center screen probe and exits fullscreen on double tap', async () => {
@@ -294,7 +305,7 @@ describe('DiagnosticAutoTestView', () => {
     expect(exitFullscreen).toHaveBeenCalled()
   })
 
-  it('uses a collect-then-confirm flow for the screen test', async () => {
+  it('keeps the screen test visible until the last color, then advances directly', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -345,8 +356,57 @@ describe('DiagnosticAutoTestView', () => {
     await wrapper.findAll('button').find((button) => button.text() === 'Terminer la sequence')?.trigger('click')
     await nextTick()
 
-    expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.phase).toBe('confirm')
-    expect(wrapper.text()).toContain('Verdict visuel final')
+    expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.phase).toBe('completed')
+    expect(store.getStepByTestId(session.id, 'screen')?.result?.status).toBe('pass')
+  })
+
+  it('secures quitting behind a confirmation dialog', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useDiagnosticStore()
+    const session = store.startSession()
+    store.startGuidedTest(session.id, 'rotation')
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/diagnostic/:sessionId/auto/:testId',
+          name: 'diagnostic-auto-test',
+          component: DiagnosticAutoTestView,
+          props: true
+        },
+        {
+          path: '/diagnostic/:sessionId/summary',
+          name: 'diagnostic-summary',
+          component: { template: '<div />' }
+        },
+        { path: '/', name: 'home', component: { template: '<div />' } }
+      ]
+    })
+
+    await router.push(`/diagnostic/${session.id}/auto/rotation`)
+    await router.isReady()
+
+    const wrapper = mount(DiagnosticAutoTestView, {
+      props: {
+        sessionId: session.id,
+        testId: 'rotation'
+      },
+      global: {
+        plugins: [pinia, router]
+      }
+    })
+
+    await wrapper.get('header button').trigger('click')
+    await nextTick()
+
+    expect(wrapper.text()).toContain('Quitter le diagnostic')
+    expect(wrapper.text()).toContain('Continuer le diagnostic')
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Continuer le diagnostic')?.trigger('click')
+    await nextTick()
+
+    expect(wrapper.text()).not.toContain('La verification en cours sera arretee')
   })
 
   it('renders touch test as a pure fullscreen grid without helper text', async () => {
@@ -437,7 +497,7 @@ describe('DiagnosticAutoTestView', () => {
     expect(wrapper.text()).toContain('Maximum')
   })
 
-  it('moves rotation to confirm after portrait and landscape are observed', async () => {
+  it('finalizes rotation after portrait and landscape are observed', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -483,9 +543,6 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
-    await wrapper.findAll('button').find((button) => button.text() === 'Commencer')?.trigger('click')
-    await nextTick()
-
     expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('active')
     expect(wrapper.text()).toContain('Portrait')
 
@@ -501,11 +558,10 @@ describe('DiagnosticAutoTestView', () => {
     await nextTick()
     await nextTick()
 
-    expect(store.getStepByTestId(session.id, 'rotation')?.guidedState?.phase).toBe('confirm')
-    expect(wrapper.text()).toContain('Verdict rotation final')
+    expect(store.getStepByTestId(session.id, 'rotation')?.result?.status).toBe('pass')
   })
 
-  it('moves accelerometer to confirm after four tilt directions are observed', async () => {
+  it('finalizes accelerometer after four tilt directions are observed', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -566,7 +622,7 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
-    await wrapper.findAll('button').find((button) => button.text() === 'Autoriser')?.trigger('click')
+    await nextTick()
     await nextTick()
 
     expect(store.getStepByTestId(session.id, 'accelerometer')?.guidedState?.phase).toBe('active')
@@ -579,11 +635,10 @@ describe('DiagnosticAutoTestView', () => {
     await nextTick()
     await nextTick()
 
-    expect(store.getStepByTestId(session.id, 'accelerometer')?.guidedState?.phase).toBe('confirm')
-    expect(wrapper.text()).toContain('Verdict accelerometre final')
+    expect(store.getStepByTestId(session.id, 'accelerometer')?.result?.status).toBe('pass')
   })
 
-  it('moves gyroscope to confirm after three axes are observed', async () => {
+  it('finalizes gyroscope after three axes are observed', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -644,7 +699,7 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
-    await wrapper.findAll('button').find((button) => button.text() === 'Autoriser')?.trigger('click')
+    await nextTick()
     await nextTick()
 
     expect(store.getStepByTestId(session.id, 'gyroscope')?.guidedState?.phase).toBe('active')
@@ -656,8 +711,7 @@ describe('DiagnosticAutoTestView', () => {
     await nextTick()
     await nextTick()
 
-    expect(store.getStepByTestId(session.id, 'gyroscope')?.guidedState?.phase).toBe('confirm')
-    expect(wrapper.text()).toContain('Verdict gyroscope final')
+    expect(store.getStepByTestId(session.id, 'gyroscope')?.result?.status).toBe('pass')
   })
 
   it('keeps the microphone test active after sound detection and exposes the waveform', async () => {
@@ -734,7 +788,6 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
-    await wrapper.findAll('button').find((button) => button.text() === 'Autoriser')?.trigger('click')
     await nextTick()
     await nextTick()
     await nextTick()
@@ -747,7 +800,7 @@ describe('DiagnosticAutoTestView', () => {
     expect(wrapper.find('[data-testid="microphone-waveform"]').exists()).toBe(true)
   })
 
-  it('moves the microphone test to confirm only when the user clicks the manual action', async () => {
+  it('finalizes the microphone test directly when the user clicks continuer', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
@@ -821,7 +874,6 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
-    await wrapper.findAll('button').find((button) => button.text() === 'Autoriser')?.trigger('click')
     await nextTick()
     await nextTick()
     await nextTick()
@@ -829,11 +881,11 @@ describe('DiagnosticAutoTestView', () => {
 
     expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('active')
 
-    await wrapper.findAll('button').find((button) => button.text() === 'Passer a la validation')?.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === 'Continuer')?.trigger('click')
     await nextTick()
 
-    expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('confirm')
-    expect(wrapper.text()).toContain('Verdict microphone final')
+    expect(store.getStepByTestId(session.id, 'microphone')?.guidedState?.phase).toBe('completed')
+    expect(store.getStepByTestId(session.id, 'microphone')?.result?.status).toBe('pass')
   })
 
 })

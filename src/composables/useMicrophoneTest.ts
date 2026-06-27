@@ -31,11 +31,11 @@ const buildMicrophoneStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'warning'
   }
 
-  if (soundDetected && state.userVerdict === 'pass') {
-    return 'pass'
+  if (state.userVerdict === 'warning') {
+    return 'warning'
   }
 
-  return 'warning'
+  return soundDetected ? 'pass' : 'warning'
 }
 
 export const useMicrophoneTest = (): DiagnosticTestDefinition => ({
@@ -71,7 +71,7 @@ export const useMicrophoneTest = (): DiagnosticTestDefinition => ({
     testId: 'microphone',
     status: buildMicrophoneStatus(state),
     summary:
-      Boolean(state.metrics.soundDetected) && state.userVerdict === 'pass'
+      buildMicrophoneStatus(state) === 'pass'
         ? 'Le microphone a bien capte un signal exploitable.'
         : 'Le test microphone reste partiel, douteux ou a echoue.',
     details: buildMicrophoneDetails(state),

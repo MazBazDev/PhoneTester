@@ -46,11 +46,11 @@ const buildAccelerometerStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'warning'
   }
 
-  if (completed && state.userVerdict === 'pass') {
-    return 'pass'
+  if (state.userVerdict === 'warning') {
+    return 'warning'
   }
 
-  return 'warning'
+  return completed ? 'pass' : 'warning'
 }
 
 export const useAccelerometerTest = (): DiagnosticTestDefinition => ({

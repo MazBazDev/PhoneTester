@@ -37,11 +37,11 @@ const buildCompassStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'warning'
   }
 
-  if (headingDetected && state.userVerdict === 'pass') {
-    return 'pass'
+  if (state.userVerdict === 'warning') {
+    return 'warning'
   }
 
-  return 'warning'
+  return headingDetected ? 'pass' : 'warning'
 }
 
 export const useCompassTest = (): DiagnosticTestDefinition => ({

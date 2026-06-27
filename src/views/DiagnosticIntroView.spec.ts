@@ -38,7 +38,7 @@ describe('DiagnosticIntroView', () => {
 
     const launchButton = wrapper
       .findAll('button')
-      .find((entry) => entry.text().includes('Lancer'))
+      .find((entry) => entry.text().includes('Commencer'))
 
     if (!launchButton) {
       throw new Error('launch button not found')

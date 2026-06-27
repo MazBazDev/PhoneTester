@@ -41,11 +41,11 @@ const buildRearStatus = (state: DiagnosticGuidedState): TestStatus => {
     return 'failed'
   }
 
-  if (allObjectivesCaptured && state.userVerdict === 'pass') {
-    return 'pass'
+  if (state.userVerdict === 'warning') {
+    return 'warning'
   }
 
-  return 'warning'
+  return allObjectivesCaptured ? 'pass' : 'warning'
 }
 
 export const useCameraRearTest = (): DiagnosticTestDefinition => ({

@@ -18,13 +18,45 @@
 
     <AppShell
       v-else
-      :eyebrow="testDefinition.mode === 'guided' ? 'Diagnostic guide' : 'Diagnostic automatique'"
-      :title="testDefinition.name"
-      :description="screenImmersiveActive ? '' : testDefinition.description"
-      :progress="store.sessionProgress"
+      eyebrow="Verification"
+      :title="productTestCopy.label"
+      :description="screenImmersiveActive ? '' : productTestCopy.description"
+      :progress="visibleProgress"
       :immersive="screenImmersiveActive"
     >
+      <template #header-actions>
+        <button
+          type="button"
+          aria-label="Quitter le diagnostic"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-950 transition hover:bg-stone-200/70"
+          @click="openQuitDialog"
+        >
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-4 w-4">
+            <path
+              d="M5 5L15 15M15 5L5 15"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </template>
+
       <div class="space-y-4" :class="screenImmersiveActive ? 'flex min-h-[70vh] flex-col justify-between' : ''">
+        <AppCard
+          v-if="showQuitDialog"
+          class="border border-rose-200 bg-rose-50/80"
+        >
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-700">Quitter le diagnostic</p>
+          <p class="mt-2 text-sm leading-6 text-rose-700">
+            La verification en cours sera arretee et tu reviendras a l’accueil.
+          </p>
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <AppButton class="w-full" variant="secondary" @click="closeQuitDialog">Continuer le diagnostic</AppButton>
+            <AppButton class="w-full" @click="quitDiagnostic">Quitter</AppButton>
+          </div>
+        </AppCard>
+
         <div
           v-if="!screenImmersiveActive"
           class="rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3"
@@ -32,9 +64,12 @@
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Test {{ currentIndex + 1 }} / {{ session.steps.length }}
+                En cours
               </p>
               <p class="mt-1 truncate text-sm text-slate-700">{{ helperText }}</p>
+              <p v-if="visibleSubStepLabel" class="mt-2 text-xs text-slate-500">
+                {{ visibleSubStepLabel }}
+              </p>
             </div>
             <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="badgeClass">
               {{ badgeLabel }}
@@ -44,7 +79,7 @@
 
         <template v-if="testDefinition.mode === 'guided' && guidedState">
           <section
-            v-if="props.testId === 'screen' && currentGuidedSubStep && guidedState.phase === 'active'"
+            v-if="props.testId === 'screen' && currentGuidedSubStep && ['active', 'confirm'].includes(guidedState.phase)"
             ref="screenPanelRef"
             class="flex flex-1 flex-col shadow-2xl"
             :class="[currentGuidedSubStep.tone, screenImmersiveActive ? 'min-h-[100dvh] rounded-none' : 'rounded-[32px] px-6 py-8']"
@@ -146,25 +181,24 @@
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr]">
               <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Positions attendues</p>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Progression</p>
                 <div class="mt-4 grid grid-cols-2 gap-3">
                   <div class="rounded-[20px] border px-4 py-4" :class="rotationHasPortrait ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'">
                     <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="rotationHasPortrait ? 'text-emerald-700' : 'text-slate-500'">Portrait</p>
                     <p class="mt-2 text-sm font-medium" :class="rotationHasPortrait ? 'text-emerald-900' : 'text-slate-700'">
-                      {{ rotationHasPortrait ? 'Observe' : 'En attente' }}
+                      {{ rotationHasPortrait ? 'OK' : 'A faire' }}
                     </p>
                   </div>
                   <div class="rounded-[20px] border px-4 py-4" :class="rotationHasLandscape ? 'border-emerald-200 bg-emerald-50' : 'border-stone-300/80 bg-stone-50/70'">
                     <p class="text-xs font-semibold uppercase tracking-[0.16em]" :class="rotationHasLandscape ? 'text-emerald-700' : 'text-slate-500'">Paysage</p>
                     <p class="mt-2 text-sm font-medium" :class="rotationHasLandscape ? 'text-emerald-900' : 'text-slate-700'">
-                      {{ rotationHasLandscape ? 'Observe' : 'En attente' }}
+                      {{ rotationHasLandscape ? 'OK' : 'A faire' }}
                     </p>
                   </div>
                 </div>
-                <div class="mt-4 rounded-[20px] border border-stone-300/80 bg-stone-50/70 px-4 py-4">
-                  <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Orientation courante</p>
-                  <p class="mt-2 text-lg font-bold text-slate-950">{{ rotationCurrentOrientation }}</p>
-                </div>
+                <p class="mt-4 text-sm text-slate-600">
+                  {{ rotationUiReady ? 'Les deux positions ont bien ete vues.' : 'Fais encore pivoter le telephone pour valider les deux positions.' }}
+                </p>
               </div>
 
               <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
@@ -173,13 +207,10 @@
                   <div class="rounded-[28px] border border-stone-300 bg-stone-100 p-4">
                     <div
                       class="rounded-[22px] border border-stone-300 bg-white transition-all duration-300"
-                      :class="rotationCurrentOrientation === 'landscape' ? 'h-28 w-44' : 'h-44 w-28'"
+                      :class="rotationHasLandscape ? 'h-28 w-44' : 'h-44 w-28'"
                     />
                   </div>
                 </div>
-                <p class="mt-4 text-center text-sm text-slate-600">
-                  {{ rotationUiReady ? 'Les deux positions ont ete detectees.' : 'Le test attend encore une bascule visible.' }}
-                </p>
               </div>
             </div>
           </section>
@@ -194,8 +225,8 @@
               <p class="mt-3 text-sm font-medium" :class="sensorPermissionState === 'denied' ? 'text-amber-700' : 'text-slate-700'">
                 {{
                   sensorPermissionState === 'denied'
-                    ? 'Permission mouvement refusee. Tu peux tout de meme passer au verdict final.'
-                    : 'Le test avance seul des que les quatre directions sont detectees.'
+                    ? 'Le mouvement n’est pas accessible. Tu pourras tout de meme donner ton ressenti.'
+                    : 'Continue jusqu’a voir les quatre directions passer au vert.'
                 }}
               </p>
             </div>
@@ -223,10 +254,9 @@
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr]">
               <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Direction courante</p>
-                <p class="mt-3 text-2xl font-bold text-slate-950">{{ formatAccelerometerTilt(accelerometerCurrentTilt) }}</p>
-                <p class="mt-2 text-sm text-slate-600">
-                  {{ accelerometerTiltReady ? 'Les quatre directions ont ete detectees.' : 'Le test attend encore des inclinaisons manquantes.' }}
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Progression</p>
+                <p class="mt-3 text-sm text-slate-600">
+                  {{ accelerometerTiltReady ? 'Les quatre inclinaisons ont bien reagi.' : 'Continue a incliner le telephone dans chaque direction.' }}
                 </p>
               </div>
 
@@ -265,8 +295,8 @@
               <p class="mt-3 text-sm font-medium" :class="sensorPermissionState === 'denied' ? 'text-amber-700' : 'text-slate-700'">
                 {{
                   sensorPermissionState === 'denied'
-                    ? 'Permission mouvement refusee. Tu peux tout de meme passer au verdict final.'
-                    : 'Le test avance seul des que les trois axes sont detectes.'
+                    ? 'Le mouvement n’est pas accessible. Tu pourras tout de meme donner ton ressenti.'
+                    : 'Continue a faire pivoter le telephone jusqu’a valider les trois directions.'
                 }}
               </p>
             </div>
@@ -293,10 +323,9 @@
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-[1.1fr_0.9fr]">
               <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Axe courant</p>
-                <p class="mt-3 text-2xl font-bold text-slate-950">{{ formatGyroscopeAxis(gyroscopeCurrentAxis) }}</p>
-                <p class="mt-2 text-sm text-slate-600">
-                  {{ gyroscopeAxesReady ? 'Les trois axes ont ete detectes.' : 'Le test attend encore des rotations manquantes.' }}
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Progression</p>
+                <p class="mt-3 text-sm text-slate-600">
+                  {{ gyroscopeAxesReady ? 'Les trois mouvements ont bien reagi.' : 'Continue a faire pivoter le telephone dans plusieurs sens.' }}
                 </p>
               </div>
 
@@ -327,20 +356,19 @@
             <SensorLivePanel
               :title="sensorPanelTitle"
               :hint="sensorPanelHint"
-              :axis-entries="sensorAxisEntries"
-              :info-entries="sensorInfoEntries"
-              :phone-rotation="sensorPhoneRotation"
-              :max-value="sensorMaxValue"
+              :axis-entries="[]"
+              :info-entries="[]"
+              :phone-rotation="{ x: 0, y: 0, z: 0 }"
+              :max-value="360"
               :permission-state="sensorPermissionState"
               :variant="sensorPanelVariant"
               :compass-heading="compassHeading"
               :gps-status-label="gpsStatusLabel"
-              :gps-main-value="gpsMainValue"
               :gps-secondary-label="gpsSecondaryLabel"
             />
           </section>
 
-          <section v-else-if="isMicrophoneTest && guidedState.phase === 'active'">
+          <section v-else-if="isMicrophoneTest && ['active', 'confirm'].includes(guidedState.phase)">
             <div class="space-y-4">
               <div class="rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-5">
                 <div class="flex items-start justify-between gap-3">
@@ -358,7 +386,7 @@
               </div>
 
               <MicrophoneLivePanel
-                hint="Parle ou tapote pres du micro. Le niveau et le pic doivent reagir rapidement."
+                hint="Parle ou tapote pres du micro. La courbe doit reagir rapidement."
                 :level="microphoneLevel"
                 :peak-level="microphonePeakLevel"
                 :sound-detected="microphoneSoundDetected"
@@ -372,7 +400,7 @@
             </div>
           </section>
 
-          <section v-else-if="isMediaTest && guidedState.phase === 'active'">
+          <section v-else-if="isMediaTest && ['active', 'confirm'].includes(guidedState.phase)">
             <div class="mb-4 flex items-start justify-between gap-3 rounded-[20px] border border-stone-300/80 bg-[color:var(--color-surface)] px-4 py-3">
               <div>
                 <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -394,7 +422,7 @@
                 ref="cameraPanelRef"
                 :stream="cameraStream"
                 :preview-url="currentCaptureUrl"
-                :active-device-label="cameraActiveDeviceLabel"
+                :active-device-label="cameraRuntime.activeDeviceLabel.value"
                 :available-devices="selectedCameraDevices"
                 :selected-device-id="cameraActiveDeviceId"
                 :show-device-selector="showRearDeviceSelector"
@@ -405,15 +433,12 @@
               />
             </div>
 
-            <div
-              v-if="props.testId === 'camera-rear'"
-              class="mt-4 rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4"
-            >
+            <div v-if="props.testId === 'camera-rear'" class="mt-4 rounded-[24px] border border-stone-300/80 bg-[color:var(--color-surface)] p-4">
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Couverture objectifs</p>
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Objectifs</p>
                   <p class="mt-1 text-sm text-slate-600">
-                    {{ rearRemainingObjectiveCount === 0 ? 'Tous les objectifs detectes ont ete captures.' : `${rearRemainingObjectiveCount} objectif${rearRemainingObjectiveCount > 1 ? 's' : ''} restant${rearRemainingObjectiveCount > 1 ? 's' : ''}.` }}
+                    {{ rearRemainingObjectiveCount === 0 ? 'Toutes les vues ont bien ete prises.' : `${rearRemainingObjectiveCount} vue${rearRemainingObjectiveCount > 1 ? 's' : ''} restante${rearRemainingObjectiveCount > 1 ? 's' : ''}.` }}
                   </p>
                 </div>
                 <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]" :class="rearAllObjectivesCaptured ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-slate-700'">
@@ -434,237 +459,73 @@
                   <p class="mt-2 text-sm font-medium" :class="rearCapturedDeviceIds.includes(device.deviceId) ? 'text-emerald-900' : 'text-slate-700'">
                     {{
                       rearCapturedDeviceIds.includes(device.deviceId)
-                        ? 'capture'
+                          ? 'ok'
                         : cameraActiveDeviceId === device.deviceId
-                          ? 'actif'
-                          : 'a tester'
+                          ? 'en cours'
+                          : 'a faire'
                     }}
                   </p>
                 </div>
               </div>
             </div>
           </section>
-
-            <AppCard v-else-if="guidedState.phase === 'confirm' || step.result">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Validation</p>
-            <h2 class="mt-2 text-2xl font-bold text-slate-950">{{ confirmationTitle }}</h2>
-            <p class="mt-2 text-sm text-slate-600">{{ confirmationText }}</p>
-
-            <div v-if="props.testId === 'touch'" class="mt-5 grid grid-cols-2 gap-3">
-              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Couverture</p>
-                <p class="mt-2 text-xl font-bold text-slate-950">{{ touchCoveragePercent }}%</p>
-              </div>
-              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mode de fin</p>
-                <p class="mt-2 text-xl font-bold text-slate-950">
-                  {{ guidedState.metrics.completedAutomatically ? 'automatique' : '5 taps' }}
-                </p>
-              </div>
-            </div>
-
-            <div v-else-if="isGyroscopeTest" class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div
-                v-for="axis in [
-                  { key: 'alpha', label: 'Axe alpha' },
-                  { key: 'beta', label: 'Axe beta' },
-                  { key: 'gamma', label: 'Axe gamma' }
-                ]"
-                :key="axis.key"
-                class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3"
-              >
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{{ axis.label }}</p>
-                <p class="mt-2 text-xl font-bold text-slate-950">{{ gyroscopeObservedAxes.includes(axis.key) ? 'observe' : 'non vu' }}</p>
-              </div>
-            </div>
-
-            <div v-else-if="isAccelerometerTest" class="mt-5 grid grid-cols-2 gap-3">
-              <div
-                v-for="direction in [
-                  { key: 'up', label: 'Haut' },
-                  { key: 'down', label: 'Bas' },
-                  { key: 'left', label: 'Gauche' },
-                  { key: 'right', label: 'Droite' }
-                ]"
-                :key="direction.key"
-                class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3"
-              >
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{{ direction.label }}</p>
-                <p class="mt-2 text-xl font-bold text-slate-950">{{ accelerometerObservedTilts.includes(direction.key) ? 'observee' : 'non vue' }}</p>
-              </div>
-            </div>
-
-            <div v-else-if="isRotationTest" class="mt-5 grid grid-cols-2 gap-3">
-              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Portrait</p>
-                <p class="mt-2 text-xl font-bold text-slate-950">{{ rotationHasPortrait ? 'observe' : 'non vu' }}</p>
-              </div>
-              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Paysage</p>
-                <p class="mt-2 text-xl font-bold text-slate-950">{{ rotationHasLandscape ? 'observe' : 'non vu' }}</p>
-              </div>
-            </div>
-
-            <div v-else-if="isMultitouchTest" class="mt-5 grid grid-cols-2 gap-3">
-              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Actifs</p>
-                <p class="mt-2 text-xl font-bold text-slate-950">{{ multitouchActiveTouches }}</p>
-              </div>
-              <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Maximum</p>
-                <p class="mt-2 text-xl font-bold text-slate-950">{{ multitouchMaxSimultaneousTouches }}</p>
-              </div>
-            </div>
-
-            <div
-              v-else-if="isSensorTest && !step.result"
-              class="mt-5 grid grid-cols-1 gap-3 rounded-[28px] border border-slate-200 bg-slate-50 p-4"
-            >
-              <div
-                v-for="entry in sensorInfoEntries"
-                :key="entry.label"
-                class="flex items-center justify-between gap-3"
-              >
-                <span class="text-sm text-slate-600">{{ entry.label }}</span>
-                <span class="text-sm font-semibold text-slate-950">{{ entry.value }}</span>
-              </div>
-            </div>
-
-            <div
-              v-else-if="isMicrophoneTest"
-              class="mt-5 grid grid-cols-1 gap-3 rounded-[28px] border border-slate-200 bg-slate-50 p-4"
-            >
-              <div
-                v-for="entry in microphoneInfoEntries"
-                :key="entry.label"
-                class="flex items-center justify-between gap-3"
-              >
-                <span class="text-sm text-slate-600">{{ entry.label }}</span>
-                <span class="text-sm font-semibold text-slate-950">{{ entry.value }}</span>
-              </div>
-            </div>
-
-            <div v-else-if="isMediaTest" class="mt-5 space-y-3">
-              <div v-if="currentCaptureUrl" class="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Capture</p>
-                <img :src="currentCaptureUrl" alt="Capture du test camera" class="mt-3 rounded-2xl border border-slate-200 object-cover" />
-              </div>
-              <div class="grid grid-cols-1 gap-3 rounded-[28px] border border-slate-200 bg-slate-50 p-4">
-                <div
-                  v-for="entry in mediaInfoEntries"
-                  :key="entry.label"
-                  class="flex items-center justify-between gap-3"
-                >
-                  <span class="text-sm text-slate-600">{{ entry.label }}</span>
-                  <span class="text-sm font-semibold text-slate-950">{{ entry.value }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="!step.result" class="mt-5 grid grid-cols-2 gap-3">
-              <AppButton class="w-full" variant="secondary" @click="confirmGuided('warning')">Doute</AppButton>
-              <AppButton class="w-full" @click="confirmGuided('pass')">Conforme</AppButton>
-            </div>
-
-            <div v-else class="mt-5 space-y-3">
-              <div
-                v-for="detail in step.result.details"
-                :key="detail.label"
-                class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-              >
-                <span class="text-sm text-slate-600">{{ detail.label }}</span>
-                <span class="text-right text-sm font-semibold text-slate-900">{{ detail.value }}</span>
-              </div>
-            </div>
-          </AppCard>
         </template>
-
-        <AppCard v-else-if="step.result">
-          <p class="text-sm font-semibold text-slate-900">{{ step.result.summary }}</p>
-          <div class="mt-4 space-y-3">
-            <div
-              v-for="detail in step.result.details"
-              :key="detail.label"
-              class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-            >
-              <span class="text-sm text-slate-600">{{ detail.label }}</span>
-              <span class="text-right text-sm font-semibold text-slate-900">{{ detail.value }}</span>
-            </div>
-          </div>
-        </AppCard>
       </div>
 
       <template #actions>
-        <AppButton class="flex-1" variant="secondary" @click="quitDiagnostic">Quitter</AppButton>
+        <template v-if="testDefinition.mode === 'automatic' && !step.result">
+          <AppButton class="flex-1" @click="runCurrentAutomaticTest">
+            Executer
+          </AppButton>
+        </template>
 
-        <AppButton
-          v-if="testDefinition.mode === 'automatic' && !step.result"
-          class="flex-1"
-          @click="runCurrentAutomaticTest"
-        >
-          Executer
-        </AppButton>
+        <template v-else-if="isMicrophoneTest && guidedState?.phase === 'active'">
+          <AppButton class="flex-1" variant="secondary" @click="toggleSubjectiveIssue">
+            {{ subjectiveIssueReported ? 'Probleme signale' : 'Signaler un probleme' }}
+          </AppButton>
+          <AppButton class="flex-1" @click="finishMicrophoneCollection">
+            Continuer
+          </AppButton>
+        </template>
 
-        <AppButton
-          v-else-if="testDefinition.mode === 'guided' && guidedState?.phase === 'idle'"
-          class="flex-1"
-          @click="launchGuidedTest"
-        >
-          {{ launchButtonLabel }}
-        </AppButton>
+        <template v-else-if="isMediaTest && guidedState?.phase === 'active'">
+          <AppButton class="flex-1" variant="secondary" @click="toggleSubjectiveIssue">
+            {{ subjectiveIssueReported ? 'Probleme signale' : 'Signaler un probleme' }}
+          </AppButton>
+          <AppButton class="flex-1" :disabled="mediaPrimaryActionDisabled" @click="handleMediaPrimaryAction">
+            {{ mediaPrimaryActionLabel }}
+          </AppButton>
+        </template>
 
-        <AppButton
-          v-else-if="isGyroscopeTest && guidedState?.phase === 'active'"
-          class="flex-1"
-          @click="finishSensorCollection"
-        >
-          Passer a la validation
-        </AppButton>
+        <template v-else-if="isGyroscopeTest && guidedState?.phase === 'active'">
+          <AppButton class="flex-1" @click="finishSensorCollection('warning')">
+            Continuer
+          </AppButton>
+        </template>
 
-        <AppButton
-          v-else-if="isAccelerometerTest && guidedState?.phase === 'active'"
-          class="flex-1"
-          @click="finishSensorCollection"
-        >
-          Passer a la validation
-        </AppButton>
+        <template v-else-if="isAccelerometerTest && guidedState?.phase === 'active'">
+          <AppButton class="flex-1" @click="finishSensorCollection('warning')">
+            Continuer
+          </AppButton>
+        </template>
 
-        <AppButton
-          v-else-if="isMultitouchTest && guidedState?.phase === 'active'"
-          class="flex-1"
-          @click="finishMultitouchCollection"
-        >
-          Passer a la validation
-        </AppButton>
+        <template v-else-if="isMultitouchTest && guidedState?.phase === 'active'">
+          <AppButton class="flex-1" @click="finishMultitouchCollection('warning')">
+            Continuer
+          </AppButton>
+        </template>
 
-        <AppButton
-          v-else-if="isSensorTest && guidedState?.phase === 'active'"
-          class="flex-1"
-          @click="finishSensorCollection"
-        >
-          Passer a la validation
-        </AppButton>
+        <template v-else-if="isSensorTest && guidedState?.phase === 'active'">
+          <AppButton class="flex-1" @click="finishSensorCollection('warning')">
+            Continuer
+          </AppButton>
+        </template>
 
-        <AppButton
-          v-else-if="isMicrophoneTest && guidedState?.phase === 'active'"
-          class="flex-1"
-          @click="finishMicrophoneCollection"
-        >
-          Passer a la validation
-        </AppButton>
-
-        <AppButton
-          v-else-if="isMediaTest && guidedState?.phase === 'active'"
-          class="flex-1"
-          :disabled="mediaPrimaryActionDisabled"
-          @click="handleMediaPrimaryAction"
-        >
-          {{ mediaPrimaryActionLabel }}
-        </AppButton>
-
-        <AppButton v-else-if="step.result" class="flex-1" @click="goNext">
-          {{ nextStep ? 'Suivant' : 'Resume' }}
-        </AppButton>
+        <template v-else-if="testDefinition.mode === 'guided' && guidedState?.phase === 'idle'">
+          <AppButton class="flex-1" @click="launchGuidedTest">
+            {{ launchButtonLabel }}
+          </AppButton>
+        </template>
       </template>
     </AppShell>
   </div>
@@ -694,6 +555,14 @@ import {
   type SensorError
 } from '../composables/useMotionSensors'
 import type { DiagnosticGuidedUserVerdict } from '../domain/diagnostic'
+import {
+  getProductTestCopy,
+  getVisibleCurrentIndex,
+  getVisibleProgressModel,
+  getVisibleSubStepMeta,
+  getVisibleTestId,
+  getVisibleTestIds
+} from '../lib/productPresentation'
 import { clearSessionCapture, getSessionCapture, setSessionCapture } from '../lib/sessionMedia'
 import { useDiagnosticStore } from '../stores/diagnostic'
 
@@ -714,6 +583,8 @@ const lastTouchTapAt = ref(0)
 const touchTapCount = ref(0)
 const launchInFlight = ref(false)
 const autoStartedTestKey = ref<string | null>(null)
+const autoAdvanceInFlight = ref(false)
+const showQuitDialog = ref(false)
 const rotationTrackingKey = ref<string | null>(null)
 const rotationUiCleanups: Array<() => void> = []
 const defaultThemeColor = '#0f172a'
@@ -722,8 +593,18 @@ const session = computed(() => store.getSessionById(props.sessionId))
 const testDefinition = computed(() => store.getTestDefinition(props.testId))
 const step = computed(() => store.getStepByTestId(props.sessionId, props.testId))
 const nextStep = computed(() => store.getNextStep(props.sessionId, props.testId))
-const currentIndex = computed(() => session.value?.steps.findIndex((entry) => entry.testId === props.testId) ?? 0)
+const currentVisibleTestId = computed(() => getVisibleTestId(props.testId))
+const visibleSubStepMeta = computed(() => getVisibleSubStepMeta(props.testId))
+const visibleTestIds = computed(() => getVisibleTestIds(session.value?.steps.map((entry) => entry.testId) ?? []))
+const visibleProgress = computed(() => getVisibleProgressModel(session.value?.steps ?? [], props.testId))
+const currentIndex = computed(() => getVisibleCurrentIndex(session.value?.steps.map((entry) => entry.testId) ?? [], props.testId))
 const guidedState = computed(() => step.value?.guidedState ?? null)
+const productTestCopy = computed(() =>
+  getProductTestCopy(
+    visibleSubStepMeta.value ? currentVisibleTestId.value : props.testId,
+    testDefinition.value?.name ?? props.testId
+  )
+)
 const currentGuidedSubStep = computed(() => store.getCurrentGuidedSubStep(props.sessionId, props.testId))
 const isRotationTest = computed(() => props.testId === 'rotation')
 const isAccelerometerTest = computed(() => props.testId === 'accelerometer')
@@ -734,6 +615,10 @@ const isAutofocusTest = computed(() => props.testId === 'autofocus')
 const isMicrophoneTest = computed(() => props.testId === 'microphone')
 const isMultitouchTest = computed(() => props.testId === 'multitouch')
 const isMediaTest = computed(() => isCameraCaptureTest.value || isAutofocusTest.value)
+const supportsIssueReporting = computed(() =>
+  ['microphone', 'camera-rear', 'camera-front', 'autofocus'].includes(props.testId)
+)
+const subjectiveIssueReported = computed(() => guidedState.value?.userVerdict === 'warning')
 const sensorMode = computed<SensorMode | null>(() => {
   if (['accelerometer', 'gyroscope', 'compass', 'gps'].includes(props.testId)) {
     return props.testId as SensorMode
@@ -751,7 +636,6 @@ const frontVideoDevices = computed(() => {
 })
 const cameraStream = computed(() => cameraRuntime.activeStream.value)
 const cameraActiveDeviceId = computed(() => cameraRuntime.activeDeviceId.value)
-const cameraActiveDeviceLabel = computed(() => cameraRuntime.activeDeviceLabel.value)
 const selectedCameraDevices = computed<CameraDeviceInfo[]>(() => {
   if (props.testId === 'camera-front') {
     return frontVideoDevices.value
@@ -810,11 +694,6 @@ const isLastGuidedSubStep = computed(() => {
 
   return guidedState.value.currentStepIndex >= guidedState.value.steps.length - 1
 })
-const requiresSystemPermission = computed(() =>
-  ['compass', 'gps', 'camera-rear', 'camera-front', 'autofocus'].includes(
-    props.testId
-  )
-)
 const autofocusTargetLabel = computed(() => {
   if (currentAutofocusStepId.value === 'autofocus-near') {
     return 'Cible proche'
@@ -844,10 +723,8 @@ const touchVisitedCellIds = computed(() => {
   const value = guidedState.value?.metrics.visitedCellIds
   return Array.isArray(value) ? value : []
 })
-const touchCoveragePercent = computed(() => Number(guidedState.value?.metrics.coveragePercent ?? 0))
 const multitouchActiveTouches = computed(() => Number(guidedState.value?.metrics.activeTouches ?? 0))
 const multitouchMaxSimultaneousTouches = computed(() => Number(guidedState.value?.metrics.maxSimultaneousTouches ?? 0))
-const rotationCurrentOrientation = computed(() => String(guidedState.value?.metrics.currentOrientation ?? 'unknown'))
 const rotationObservedOrientations = computed(() => {
   const value = guidedState.value?.metrics.observedOrientations
   return Array.isArray(value) ? value : []
@@ -892,14 +769,6 @@ const gpsStatusLabel = computed(() => {
   return 'Recherche de position'
 })
 
-const gpsMainValue = computed(() => {
-  if (Boolean(guidedState.value?.metrics.acquired)) {
-    return `${Number(guidedState.value?.metrics.accuracy ?? 0).toFixed(0)} m`
-  }
-
-  return '...'
-})
-
 const gpsSecondaryLabel = computed(() => {
   if (typeof guidedState.value?.metrics.acquiredInMs === 'number') {
     return `Temps d’acquisition: ${Math.round(Number(guidedState.value.metrics.acquiredInMs))} ms`
@@ -920,43 +789,6 @@ const sensorPanelVariant = computed<'sensor' | 'compass' | 'gps'>(() => {
   return 'sensor'
 })
 
-const sensorAxisEntries = computed(() => {
-  return []
-})
-
-const sensorInfoEntries = computed(() => {
-  if (props.testId === 'compass') {
-    return [
-      { label: 'Permission', value: sensorPermissionState.value },
-      { label: 'Cap nord', value: compassHeading.value !== null ? `${Math.round(compassHeading.value)}°` : 'indisponible' },
-      { label: 'Orientation cardinale', value: String(guidedState.value?.metrics.cardinal ?? 'inconnue') },
-      { label: 'Cap exploitable', value: Boolean(guidedState.value?.metrics.headingDetected) ? 'oui' : 'non' }
-    ]
-  }
-
-  return [
-    { label: 'Permission', value: sensorPermissionState.value },
-    { label: 'Latitude', value: typeof guidedState.value?.metrics.latitude === 'number' ? Number(guidedState.value.metrics.latitude).toFixed(6) : 'indisponible' },
-    { label: 'Longitude', value: typeof guidedState.value?.metrics.longitude === 'number' ? Number(guidedState.value.metrics.longitude).toFixed(6) : 'indisponible' },
-    { label: 'Precision', value: typeof guidedState.value?.metrics.accuracy === 'number' ? `${Number(guidedState.value.metrics.accuracy).toFixed(1)} m` : 'indisponible' },
-    { label: 'Altitude', value: typeof guidedState.value?.metrics.altitude === 'number' ? `${Number(guidedState.value.metrics.altitude).toFixed(1)} m` : 'indisponible' },
-    { label: 'Vitesse', value: typeof guidedState.value?.metrics.speed === 'number' ? `${Number(guidedState.value.metrics.speed).toFixed(1)} m/s` : 'indisponible' },
-    { label: 'Acquisition', value: typeof guidedState.value?.metrics.acquiredInMs === 'number' ? `${Math.round(Number(guidedState.value.metrics.acquiredInMs))} ms` : 'en attente' }
-  ]
-})
-
-const sensorPhoneRotation = computed(() => {
-  return {
-    x: Number(guidedState.value?.metrics.beta ?? 0) * 0.5,
-    y: Number(guidedState.value?.metrics.gamma ?? 0) * 0.5,
-    z: Number(guidedState.value?.metrics.alpha ?? 0) * 0.15
-  }
-})
-
-const sensorMaxValue = computed(() => {
-  return 360
-})
-
 const sensorPanelTitle = computed(() => {
   if (props.testId === 'compass') {
     return 'Boussole live'
@@ -973,105 +805,53 @@ const sensorPanelHint = computed(() => {
   return 'Attends une position, puis verifie la coherence des mesures GPS.'
 })
 
-const mediaInfoEntries = computed(() => {
-  if (props.testId === 'autofocus') {
-    return [
-      { label: 'Permission', value: String(guidedState.value?.metrics.permissionState ?? 'unknown') },
-      { label: 'Camera active', value: String(guidedState.value?.metrics.activeDeviceLabel ?? 'inconnue') },
-      { label: 'Etape proche', value: Boolean(guidedState.value?.metrics.nearValidated) ? 'validee' : 'non validee' },
-      { label: 'Etape loin', value: Boolean(guidedState.value?.metrics.farValidated) ? 'validee' : 'non validee' }
-    ]
+const helperText = computed(() => {
+  if (props.testId === 'device-info') {
+    return 'Preparation rapide du telephone.'
   }
 
-  return [
-    { label: 'Permission', value: String(guidedState.value?.metrics.permissionState ?? 'unknown') },
-    { label: 'Camera active', value: String(guidedState.value?.metrics.activeDeviceLabel ?? 'inconnue') },
-    {
-      label: 'Objectifs detectes',
-      value: String(guidedState.value?.metrics.availableDeviceCount ?? selectedCameraDevices.value.length)
-    },
-    ...(props.testId === 'camera-rear'
-      ? [
-          {
-            label: 'Objectifs captures',
-            value: `${rearCapturedDeviceIds.value.length}/${rearAvailableDeviceIds.value.length || selectedCameraDevices.value.length}`
-          }
-        ]
-      : []),
-    {
-      label: 'Capture',
-      value:
-        props.testId === 'camera-rear'
-          ? rearAllObjectivesCaptured.value
-            ? 'complete'
-            : currentRearObjectiveCaptured.value
-              ? 'objectif capture'
-              : 'en attente'
-          : Boolean(guidedState.value?.metrics.captureSucceeded)
-            ? 'reussie'
-            : 'non capturee'
-    },
-    {
-      label: 'Preview',
-      value: cameraPreviewReady.value ? 'prete' : 'initialisation'
-    }
-  ]
-})
-
-const microphoneInfoEntries = computed(() => [
-  { label: 'Permission', value: String(guidedState.value?.metrics.permissionState ?? 'unknown') },
-  { label: 'Flux audio', value: Boolean(guidedState.value?.metrics.streamOpened) ? 'actif' : 'inactif' },
-  { label: 'Niveau actuel', value: `${Math.round(microphoneLevel.value * 100)}%` },
-  { label: 'Pic detecte', value: `${Math.round(microphonePeakLevel.value * 100)}%` },
-  { label: 'Son detecte', value: microphoneSoundDetected.value ? 'oui' : 'non' }
-])
-
-const helperText = computed(() => {
   if (step.value?.status === 'running' && testDefinition.value?.mode === 'automatic') {
-    return 'Collecte en cours.'
+    return 'Verification en cours.'
   }
 
   if (step.value?.result) {
-    return 'Test termine.'
-  }
-
-  if (isMediaTest.value) {
-    return 'Autorise la camera puis valide le rendu.'
-  }
-
-  if (isMicrophoneTest.value) {
-    return 'Autorise le micro puis parle.'
-  }
-
-  if (isMultitouchTest.value) {
-    return 'Pose plusieurs doigts ensemble.'
-  }
-
-  if (isRotationTest.value) {
-    return "Fais pivoter l'interface entre portrait et paysage."
-  }
-
-  if (isAccelerometerTest.value) {
-    return 'Autorise le mouvement puis incline le telephone dans quatre directions.'
-  }
-
-  if (isGyroscopeTest.value) {
-    return 'Autorise le mouvement puis fais pivoter le telephone autour de lui-meme.'
+    return visibleSubStepMeta.value ? `${productTestCopy.value.label} est termine.` : 'Cette etape est terminee.'
   }
 
   if (testDefinition.value?.mode === 'guided') {
-    return 'Suis l’action affichee.'
+    if (currentGuidedSubStep.value?.label) {
+      return currentGuidedSubStep.value.label
+    }
+
+    return 'Suis simplement la consigne a l’ecran.'
   }
 
-  return 'Lance le controle.'
+  return 'Lance la verification.'
+})
+const visibleSubStepLabel = computed(() => {
+  if (!visibleSubStepMeta.value || visibleSubStepMeta.value.total <= 1) {
+    return ''
+  }
+
+  const currentLabel = currentGuidedSubStep.value?.label ?? testDefinition.value?.name ?? 'Sous-etape'
+
+  return `${visibleSubStepMeta.value.current} / ${visibleSubStepMeta.value.total} dans ${visibleSubStepMeta.value.label} · ${currentLabel}`
 })
 
 const badgeLabel = computed(() => {
   if (!step.value?.result) {
-    return step.value?.status === 'running' ? 'en cours' : 'a lancer'
+    return step.value?.status === 'running' ? 'en cours' : 'a faire'
   }
 
-  return step.value.result.status.replace('_', ' ')
+  if (step.value.result.status === 'pass') {
+    return 'ok'
+  }
+
+  if (step.value.result.status === 'failed') {
+    return 'attention'
+  }
+
+  return 'a verifier'
 })
 
 const badgeClass = computed(() => {
@@ -1090,94 +870,6 @@ const badgeClass = computed(() => {
   }
 
   return 'bg-slate-200 text-slate-700'
-})
-
-const confirmationTitle = computed(() => {
-  if (props.testId === 'screen') {
-    return 'Verdict visuel final'
-  }
-
-  if (isRotationTest.value) {
-    return 'Verdict rotation final'
-  }
-
-  if (isAccelerometerTest.value) {
-    return 'Verdict accelerometre final'
-  }
-
-  if (isGyroscopeTest.value) {
-    return 'Verdict gyroscope final'
-  }
-
-  if (props.testId === 'touch') {
-    return 'Verdict tactile final'
-  }
-
-  if (isMultitouchTest.value) {
-    return 'Verdict multitouch final'
-  }
-
-  if (props.testId === 'gps') {
-    return 'Verdict GPS final'
-  }
-
-  if (isCameraCaptureTest.value) {
-    return 'Verdict camera final'
-  }
-
-  if (isAutofocusTest.value) {
-    return 'Verdict autofocus final'
-  }
-
-  if (isMicrophoneTest.value) {
-    return 'Verdict microphone final'
-  }
-
-  return 'Verdict capteur final'
-})
-
-const confirmationText = computed(() => {
-  if (props.testId === 'screen') {
-    return "Confirme l'etat de l'ecran."
-  }
-
-  if (isRotationTest.value) {
-    return "Confirme que l'interface tourne correctement."
-  }
-
-  if (isAccelerometerTest.value) {
-    return "Confirme que les inclinaisons ont bien ete detectees."
-  }
-
-  if (isGyroscopeTest.value) {
-    return 'Confirme que les trois axes de rotation ont bien reagi.'
-  }
-
-  if (props.testId === 'touch') {
-    return 'Confirme le ressenti tactile.'
-  }
-
-  if (isMultitouchTest.value) {
-    return 'Confirme la detection simultanee.'
-  }
-
-  if (props.testId === 'gps') {
-    return 'Confirme la coherence GPS.'
-  }
-
-  if (isCameraCaptureTest.value) {
-    return 'Confirme le flux et la capture.'
-  }
-
-  if (isAutofocusTest.value) {
-    return "Confirme la mise au point."
-  }
-
-  if (isMicrophoneTest.value) {
-    return 'Confirme la reaction du micro.'
-  }
-
-  return 'Confirme les mesures.'
 })
 
 const launchButtonLabel = computed(() => {
@@ -1199,10 +891,10 @@ const mediaPrimaryActionLabel = computed(() => {
     }
 
     if (props.testId === 'camera-rear' && rearAllObjectivesCaptured.value) {
-      return 'Passer a la validation'
+      return 'Continuer'
     }
 
-    return currentCaptureUrl.value ? 'Passer a la validation' : 'Prendre une photo'
+    return currentCaptureUrl.value ? 'Valider la photo' : 'Prendre une photo'
   }
 
   if (currentAutofocusStepId.value === 'autofocus-near') {
@@ -1210,7 +902,7 @@ const mediaPrimaryActionLabel = computed(() => {
   }
 
   if (currentAutofocusStepId.value === 'autofocus-far') {
-    return 'Passer a la validation'
+    return 'Continuer'
   }
 
   return 'Continuer'
@@ -1249,14 +941,6 @@ const getAccelerometerTilt = (sample: AccelerometerSample, threshold: number) =>
   return sample.y >= 0 ? 'down' : 'up'
 }
 
-const formatAccelerometerTilt = (tilt: string) => {
-  if (tilt === 'left') return 'gauche'
-  if (tilt === 'right') return 'droite'
-  if (tilt === 'up') return 'haut'
-  if (tilt === 'down') return 'bas'
-  return 'aucune'
-}
-
 const getGyroscopeAxis = (sample: GyroscopeSample, threshold: number) => {
   const alpha = Math.abs(sample.alpha)
   const beta = Math.abs(sample.beta)
@@ -1276,13 +960,6 @@ const getGyroscopeAxis = (sample: GyroscopeSample, threshold: number) => {
   }
 
   return 'gamma'
-}
-
-const formatGyroscopeAxis = (axis: string) => {
-  if (axis === 'alpha') return 'alpha'
-  if (axis === 'beta') return 'beta'
-  if (axis === 'gamma') return 'gamma'
-  return 'aucun'
 }
 
 const getUiOrientationKind = () => {
@@ -1339,7 +1016,7 @@ const trackRotationUiSample = () => {
     guidedState.value?.phase === 'active'
   ) {
     stopRotationUiTracking()
-    store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+    void finalizeAndAdvance('pass')
   }
 }
 
@@ -1391,7 +1068,11 @@ const updateFromSensorError = (error: SensorError) => {
 }
 
 const runCurrentAutomaticTest = async () => {
-  await store.runTest(props.sessionId, props.testId)
+  const result = await store.runTest(props.sessionId, props.testId)
+
+  if (result) {
+    await navigateNext()
+  }
 }
 
 const enterScreenFullscreen = async () => {
@@ -1466,6 +1147,53 @@ const stopActiveRuntimes = () => {
   cameraRuntime.stopStream()
   microphoneRuntime.stopStream()
   void exitScreenFullscreen()
+}
+
+const openQuitDialog = () => {
+  showQuitDialog.value = true
+}
+
+const closeQuitDialog = () => {
+  showQuitDialog.value = false
+}
+
+const navigateNext = async () => {
+  if (autoAdvanceInFlight.value) {
+    return
+  }
+
+  autoAdvanceInFlight.value = true
+
+  try {
+    if (!nextStep.value) {
+      await router.push({
+        name: 'diagnostic-summary',
+        params: { sessionId: props.sessionId }
+      })
+      return
+    }
+
+    await router.push({
+      name: 'diagnostic-auto-test',
+      params: {
+        sessionId: props.sessionId,
+        testId: nextStep.value.testId
+      }
+    })
+  } finally {
+    autoAdvanceInFlight.value = false
+  }
+}
+
+const finalizeAndAdvance = async (verdict?: DiagnosticGuidedUserVerdict | null) => {
+  stopActiveRuntimes()
+
+  if (verdict !== undefined) {
+    store.setGuidedUserVerdict(props.sessionId, props.testId, verdict)
+  }
+
+  store.finalizeGuidedTest(props.sessionId, props.testId)
+  await navigateNext()
 }
 
 const syncCameraMetrics = (overrides?: Record<string, string | number | boolean | null | string[]>) => {
@@ -1614,7 +1342,7 @@ const launchGuidedTest = async () => {
             guidedState.value?.phase === 'active'
           ) {
             sensorRuntime.stopListening()
-            store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+            void finalizeAndAdvance('pass')
           }
         },
         updateFromSensorError
@@ -1671,7 +1399,7 @@ const launchGuidedTest = async () => {
             guidedState.value?.phase === 'active'
           ) {
             sensorRuntime.stopListening()
-            store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+            void finalizeAndAdvance('pass')
           }
         },
         updateFromSensorError
@@ -1739,6 +1467,11 @@ const launchGuidedTest = async () => {
           },
           { persist: false }
         )
+
+        if (compass.hasHeading && guidedState.value?.phase === 'active') {
+          sensorRuntime.stopListening()
+          void finalizeAndAdvance('pass')
+        }
         return
       }
 
@@ -1761,6 +1494,11 @@ const launchGuidedTest = async () => {
         },
         { persist: false }
       )
+
+      if (guidedState.value?.phase === 'active') {
+        sensorRuntime.stopListening()
+        void finalizeAndAdvance('pass')
+      }
       },
       updateFromSensorError
     )
@@ -1859,7 +1597,20 @@ const validateAutofocusStep = () => {
       farValidated: true
     })
     store.completeGuidedStep(props.sessionId, props.testId)
+    void finalizeAndAdvance()
   }
+}
+
+const toggleSubjectiveIssue = () => {
+  if (!supportsIssueReporting.value) {
+    return
+  }
+
+  store.setGuidedUserVerdict(
+    props.sessionId,
+    props.testId,
+    subjectiveIssueReported.value ? null : 'warning'
+  )
 }
 
 const toggleScreenConcern = () => {
@@ -1883,6 +1634,11 @@ const advanceScreenStep = () => {
     return
   }
 
+  if (isLastGuidedSubStep.value) {
+    void finalizeAndAdvance()
+    return
+  }
+
   store.completeGuidedStep(props.sessionId, props.testId)
 }
 
@@ -1891,7 +1647,7 @@ const finishTouchCollection = (mode: 'auto' | 'gesture') => {
     completedAutomatically: mode === 'auto',
     completedByGesture: mode === 'gesture'
   })
-  store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+  void finalizeAndAdvance(mode === 'auto' ? 'pass' : 'warning')
 }
 
 const trackTouchGrid = ({ cellIds }: { cellIds: string[] }) => {
@@ -1925,15 +1681,18 @@ const trackMultitouchPad = ({ activeTouches, maxTouches }: { activeTouches: numb
     activeTouches,
     maxSimultaneousTouches: maxTouches
   })
+
+  if (maxTouches >= 3 && guidedState.value?.phase === 'active') {
+    void finalizeAndAdvance('pass')
+  }
 }
 
-const finishMultitouchCollection = () => {
-  store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+const finishMultitouchCollection = (verdict: DiagnosticGuidedUserVerdict) => {
+  void finalizeAndAdvance(verdict)
 }
 
-const finishSensorCollection = () => {
-  sensorRuntime.stopListening()
-  store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+const finishSensorCollection = (verdict: DiagnosticGuidedUserVerdict) => {
+  void finalizeAndAdvance(verdict)
 }
 
 const finishMicrophoneCollection = () => {
@@ -1943,8 +1702,7 @@ const finishMicrophoneCollection = () => {
     peakLevel: microphoneRuntime.peakLevel.value,
     soundDetected: microphoneRuntime.soundDetected.value
   })
-  microphoneRuntime.stopStream()
-  store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+  void finalizeAndAdvance()
 }
 
 const handleMediaPrimaryAction = () => {
@@ -1966,41 +1724,25 @@ const handleMediaPrimaryAction = () => {
       return
     }
 
-    store.moveGuidedTestToConfirm(props.sessionId, props.testId)
+    if (props.testId === 'camera-rear') {
+      void finalizeAndAdvance()
+      return
+    }
+
+    void finalizeAndAdvance()
     return
   }
 
   validateAutofocusStep()
 }
 
-const confirmGuided = (verdict: DiagnosticGuidedUserVerdict) => {
-  stopActiveRuntimes()
-
-  store.setGuidedUserVerdict(props.sessionId, props.testId, verdict)
-  store.finalizeGuidedTest(props.sessionId, props.testId)
-}
-
 const goNext = async () => {
   stopActiveRuntimes()
-
-  if (!nextStep.value) {
-    await router.push({
-      name: 'diagnostic-summary',
-      params: { sessionId: props.sessionId }
-    })
-    return
-  }
-
-  await router.push({
-    name: 'diagnostic-auto-test',
-    params: {
-      sessionId: props.sessionId,
-      testId: nextStep.value.testId
-    }
-  })
+  await navigateNext()
 }
 
 const quitDiagnostic = async () => {
+  closeQuitDialog()
   stopActiveRuntimes()
   await router.push({ name: 'home' })
 }
@@ -2072,6 +1814,7 @@ watch(
   () => {
     stopRotationUiTracking()
     autoStartedTestKey.value = null
+    showQuitDialog.value = false
     lastScreenProbeTapAt.value = 0
     lastTouchTapAt.value = 0
     touchTapCount.value = 0
@@ -2083,7 +1826,13 @@ watch(
   ([sessionId, testId, phase, hasResult]) => {
     const key = `${sessionId}:${testId}`
 
-    if (!requiresSystemPermission.value || hasResult || phase !== 'idle' || autoStartedTestKey.value === key) {
+    if (testDefinition.value?.mode === 'automatic' && !hasResult && autoStartedTestKey.value !== key) {
+      autoStartedTestKey.value = key
+      void runCurrentAutomaticTest()
+      return
+    }
+
+    if (testDefinition.value?.mode !== 'guided' || hasResult || phase !== 'idle' || autoStartedTestKey.value === key) {
       return
     }
 
