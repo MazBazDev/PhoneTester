@@ -305,12 +305,11 @@ describe('DiagnosticAutoTestView', () => {
     expect(exitFullscreen).toHaveBeenCalled()
   })
 
-  it('keeps the screen test visible until the last color, then advances directly', async () => {
+  it('shows an intro before launching the fullscreen screen test, then advances directly', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useDiagnosticStore()
     const session = store.startSession()
-    store.startGuidedTest(session.id, 'screen')
 
     const router = createRouter({
       history: createMemoryHistory(),
@@ -343,10 +342,15 @@ describe('DiagnosticAutoTestView', () => {
       }
     })
 
+    expect(store.getStepByTestId(session.id, 'screen')?.guidedState?.phase).toBe('idle')
+    expect(wrapper.text()).toContain('Verifier les couleurs en plein ecran')
+    expect(wrapper.text()).toContain('Lancer le test')
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Lancer le test')?.trigger('click')
+    await nextTick()
+
     expect(wrapper.text()).toContain('Marquer un doute')
     expect(wrapper.text()).toContain('Couleur suivante')
-    expect(wrapper.text()).not.toContain('Aucun defaut')
-    expect(wrapper.text()).not.toContain('Defaut visible')
 
     for (let index = 0; index < 5; index += 1) {
       await wrapper.findAll('button').find((button) => button.text() === 'Couleur suivante')?.trigger('click')
@@ -414,7 +418,6 @@ describe('DiagnosticAutoTestView', () => {
     setActivePinia(pinia)
     const store = useDiagnosticStore()
     const session = store.startSession()
-    store.startGuidedTest(session.id, 'touch')
 
     const router = createRouter({
       history: createMemoryHistory(),
@@ -446,6 +449,12 @@ describe('DiagnosticAutoTestView', () => {
         plugins: [pinia, router]
       }
     })
+
+    expect(wrapper.text()).toContain('Verifier toute la surface tactile')
+    expect(wrapper.text()).toContain('Lancer le test')
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Lancer le test')?.trigger('click')
+    await nextTick()
 
     expect(wrapper.find('[data-testid="touch-stage"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('5 taps rapides')

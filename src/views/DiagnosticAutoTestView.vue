@@ -66,9 +66,6 @@
           </p>
           <p class="mt-2 text-base font-semibold text-slate-950">{{ instructionTitle }}</p>
           <p class="mt-2 text-sm leading-6 text-slate-600">{{ instructionText }}</p>
-          <p v-if="visibleSubStepLabel" class="mt-3 text-xs text-slate-500">
-            {{ visibleSubStepLabel }}
-          </p>
         </div>
 
         <template v-if="testDefinition.mode === 'guided' && guidedState">
@@ -448,6 +445,9 @@ const isAutofocusTest = computed(() => props.testId === 'autofocus')
 const isMicrophoneTest = computed(() => props.testId === 'microphone')
 const isMultitouchTest = computed(() => props.testId === 'multitouch')
 const isMediaTest = computed(() => isCameraCaptureTest.value || isAutofocusTest.value)
+const isImmersiveGuidedTest = computed(
+  () => Boolean(testDefinition.value?.mode === 'guided' && testDefinition.value?.immersive)
+)
 const supportsIssueReporting = computed(() =>
   ['microphone', 'camera-rear', 'camera-front', 'autofocus'].includes(props.testId)
 )
@@ -639,16 +639,20 @@ const sensorPanelHint = computed(() => {
 })
 
 const instructionEyebrow = computed(() => {
-  if (visibleSubStepMeta.value) {
-    return `${visibleSubStepMeta.value.current} / ${visibleSubStepMeta.value.total}`
-  }
-
-  return 'A faire'
+  return ''
 })
 
 const instructionTitle = computed(() => {
   if (props.testId === 'device-info') {
     return 'Preparation rapide'
+  }
+
+  if (guidedState.value?.phase === 'idle' && props.testId === 'screen') {
+    return 'Verifier les couleurs en plein ecran'
+  }
+
+  if (guidedState.value?.phase === 'idle' && props.testId === 'touch') {
+    return 'Verifier toute la surface tactile'
   }
 
   return currentGuidedSubStep.value?.label ?? productTestCopy.value.label
@@ -660,7 +664,15 @@ const instructionText = computed(() => {
   }
 
   if (props.testId === 'touch') {
+    if (guidedState.value?.phase === 'idle') {
+      return 'Le test passera en plein ecran. Fais glisser ton doigt partout sur la grille puis termine si toute la surface reagit.'
+    }
+
     return 'Passe sur toute la grille. En secours, 5 taps rapides terminent le test.'
+  }
+
+  if (props.testId === 'screen' && guidedState.value?.phase === 'idle') {
+    return 'Le telephone affichera plusieurs couleurs en plein ecran. Observe chaque fond et signale un doute si tu vois un defaut.'
   }
 
   if (props.testId === 'multitouch') {
@@ -694,17 +706,11 @@ const instructionText = computed(() => {
   return currentGuidedSubStep.value?.instruction ?? 'Suis simplement la consigne a l’ecran.'
 })
 
-const visibleSubStepLabel = computed(() => {
-  if (!visibleSubStepMeta.value || visibleSubStepMeta.value.total <= 1) {
-    return ''
+const launchButtonLabel = computed(() => {
+  if (isImmersiveGuidedTest.value) {
+    return 'Lancer le test'
   }
 
-  const currentLabel = currentGuidedSubStep.value?.label ?? testDefinition.value?.name ?? 'Sous-etape'
-
-  return `${visibleSubStepMeta.value.current} / ${visibleSubStepMeta.value.total} dans ${visibleSubStepMeta.value.label} · ${currentLabel}`
-})
-
-const launchButtonLabel = computed(() => {
   if (isAccelerometerTest.value || isGyroscopeTest.value || isSensorTest.value || isMediaTest.value || isMicrophoneTest.value) {
     return 'Autoriser'
   }
@@ -1656,7 +1662,7 @@ watch(
 watch(
   () => [props.sessionId, props.testId, guidedState.value?.phase, Boolean(step.value?.result)] as const,
   ([sessionId, testId, phase, hasResult]) => {
-    const key = `${sessionId}:${testId}`
+  const key = `${sessionId}:${testId}`
 
     if (testDefinition.value?.mode === 'automatic' && !hasResult && autoStartedTestKey.value !== key) {
       autoStartedTestKey.value = key
@@ -1665,6 +1671,10 @@ watch(
     }
 
     if (testDefinition.value?.mode !== 'guided' || hasResult || phase !== 'idle' || autoStartedTestKey.value === key) {
+      return
+    }
+
+    if (isImmersiveGuidedTest.value) {
       return
     }
 
