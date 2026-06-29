@@ -243,19 +243,26 @@ export const getVisibleProgressModel = (
       .filter((step): step is DiagnosticSessionStep => step !== undefined)
     const completedCount = groupSteps.filter((step) => step.result !== null).length
     const hasAnyIncomplete = completedCount < group.testIds.length
-    const isCurrent = Boolean(activeVisibleId && activeVisibleId === group.id && hasAnyIncomplete)
+    const isRouteCurrent = Boolean(currentVisibleId && currentVisibleId === group.id)
+    const currentGroupIndex = currentTestId ? group.testIds.indexOf(currentTestId) : -1
+    const isCurrent = isRouteCurrent || Boolean(!currentVisibleId && activeVisibleId && activeVisibleId === group.id && hasAnyIncomplete)
     const isCompleted = group.testIds.length > 0 && completedCount >= group.testIds.length
 
     const subSteps = group.testIds.map<ProgressSubStep>((testId, index) => {
       const step = steps.find((entry) => entry.testId === testId)
       const completed = step?.result !== null
-      const state: ProgressSubStepState = completed
-        ? 'completed'
-        : isCurrent && currentTestId === testId
-          ? 'current'
-          : isCurrent && !currentTestId && index === completedCount
-            ? 'current'
-            : 'upcoming'
+      const state: ProgressSubStepState =
+        isRouteCurrent && currentGroupIndex !== -1
+          ? index < currentGroupIndex
+            ? 'completed'
+            : index === currentGroupIndex
+              ? 'current'
+              : 'upcoming'
+          : completed
+            ? 'completed'
+            : isCurrent && !currentTestId && index === completedCount
+              ? 'current'
+              : 'upcoming'
 
       return {
         id: testId,
@@ -268,7 +275,7 @@ export const getVisibleProgressModel = (
     return {
       id: group.id,
       label: group.label,
-      state: isCompleted ? 'completed' : isCurrent ? 'current' : 'upcoming',
+      state: isCurrent ? 'current' : isCompleted ? 'completed' : 'upcoming',
       expanded: expandCurrent && isCurrent,
       completionRatio: group.testIds.length === 0 ? 0 : completedCount / group.testIds.length,
       subSteps

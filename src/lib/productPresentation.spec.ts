@@ -118,6 +118,35 @@ describe('productPresentation', () => {
     expect(model.blocks.every((block) => block.expanded === false)).toBe(true)
   })
 
+  it('keeps the route current block expanded and selected when revisiting a completed group', () => {
+    const steps = [
+      { testId: 'screen', result: { status: 'pass' } },
+      { testId: 'touch', result: { status: 'pass' } },
+      { testId: 'multitouch', result: { status: 'pass' } },
+      { testId: 'rotation', result: null },
+      { testId: 'accelerometer', result: null },
+      { testId: 'gyroscope', result: null },
+      { testId: 'compass', result: null },
+      { testId: 'microphone', result: null },
+      { testId: 'camera', result: null },
+      { testId: 'gps', result: null }
+    ] as never
+
+    const model = getVisibleProgressModel(steps, 'touch')
+
+    expect(model.blocks[0]).toMatchObject({
+      id: 'screen',
+      state: 'current',
+      expanded: true
+    })
+    expect(model.blocks[0]?.subSteps.map((step) => step.state)).toEqual([
+      'completed',
+      'current',
+      'upcoming'
+    ])
+    expect(model.blocks[1]?.expanded).toBe(false)
+  })
+
   it('builds a green, orange or red verdict from step statuses', () => {
     expect(
       getVerdictMeta([
